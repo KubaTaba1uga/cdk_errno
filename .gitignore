@@ -1,0 +1,10 @@
+*.o*
+*.mod*
+*.ko*
+*.order*
+*.symvers*
+*~*
+*#*
+bkp/*
+.cache/*
+build/*
