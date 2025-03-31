@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2025 Jakub Buczynski <KubaTaba1uga>
+ * SPDX-License-Identifier: MIT
+ * See LICENSE file in the project root for full license information.
+ */
 #ifndef C_MINILIB_ERROR_H
 #define C_MINILIB_ERROR_H
 
@@ -15,7 +20,7 @@ struct cme_Error *cme_error_create(int code, char *source_file,
 
 void cme_error_destroy(struct cme_Error *);
 
-#define CME_ERRORF(code, fmt, ...)                                             \
+#define cme_errorf(code, fmt, ...)                                             \
   cme_error_create((code), (char *)__FILE__, (char *)__func__, __LINE__,       \
                    (char *)(fmt), ##__VA_ARGS__)
 
