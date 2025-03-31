@@ -12,6 +12,8 @@ struct cme_Error {
   char *source_file;
   char *source_func;
   int source_line;
+  int stack_size;
+  char **stack_symbols;
 };
 
 struct cme_Error *cme_error_create(int code, char *source_file,

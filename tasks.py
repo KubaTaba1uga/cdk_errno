@@ -52,11 +52,18 @@ def install(c):
 
 
 @task
-def build(c):
+def build(c, backtrace=False):
+    """
+    Configure and build the project.
+
+    Args:
+        backtrace (bool): Enable backtrace support. Usage: inv build --backtrace
+    """
     _pr_info("Building...")
 
     _run_command(c, f"mkdir -p {BUILD_PATH}")
-    _run_command(c, f"CC={C_COMPILER} meson setup {BUILD_PATH}")
+    bt_flag = "-Dbacktrace=enabled" if backtrace else "-Dbacktrace=disabled"
+    _run_command(c, f"CC={C_COMPILER} meson setup {BUILD_PATH} {bt_flag}")
     _run_command(c, f"meson compile -C {BUILD_PATH}")
 
     _pr_info("Build done")

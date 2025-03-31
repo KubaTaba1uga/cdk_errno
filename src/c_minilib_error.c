@@ -9,13 +9,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef CME_ENABLE_BACKTRACE
+#include <execinfo.h>
+#define CME_MAX_BACKTRACE_FRAMES 16
+#endif
+
 #include "c_minilib_error.h"
 
-static struct cme_Error generic_error = {.code = -1,
-                                         .msg = "Generic error message",
-                                         .source_file = __FILE__,
-                                         .source_func = 0,
-                                         .source_line = 0};
+static struct cme_Error generic_error = {
+    .code = -1,
+    .msg = "Generic error message",
+    .source_file = __FILE__,
+    .source_func = 0,
+    .source_line = 0,
+    .stack_size = 0,
+    .stack_symbols = NULL,
+};
 
 struct cme_Error *cme_error_create(int code, char *source_file,
                                    char *source_func, int source_line,
@@ -34,6 +43,15 @@ struct cme_Error *cme_error_create(int code, char *source_file,
   err->source_file = source_file ? strdup(source_file) : NULL;
   err->source_func = source_func ? strdup(source_func) : NULL;
   err->msg = NULL;
+
+#ifdef CME_ENABLE_BACKTRACE
+  void *buffer[CME_MAX_BACKTRACE_FRAMES + 1];
+  err->stack_size = backtrace(buffer, CME_MAX_BACKTRACE_FRAMES + 1) - 1;
+  err->stack_symbols = backtrace_symbols(buffer + 1, err->stack_size);
+#else
+  err->stack_size = 0;
+  err->stack_symbols = NULL;
+#endif
 
   if (fmt) {
     va_list args;
@@ -76,5 +94,10 @@ void cme_error_destroy(struct cme_Error *err) {
   free(err->msg);
   free(err->source_file);
   free(err->source_func);
+
+#ifdef CME_ENABLE_BACKTRACE
+  free(err->stack_symbols);
+#endif
+
   free(err);
 }
