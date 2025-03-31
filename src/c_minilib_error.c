@@ -45,9 +45,15 @@ struct cme_Error *cme_error_create(int code, char *source_file,
   err->msg = NULL;
 
 #ifdef CME_ENABLE_BACKTRACE
-  void *buffer[CME_MAX_BACKTRACE_FRAMES + 1];
-  err->stack_size = backtrace(buffer, CME_MAX_BACKTRACE_FRAMES + 1) - 1;
-  err->stack_symbols = backtrace_symbols(buffer + 1, err->stack_size);
+  void *buffer[CME_MAX_BACKTRACE_FRAMES + 2];
+  int total = backtrace(buffer, CME_MAX_BACKTRACE_FRAMES + 2);
+  if (total > 2) {
+    err->stack_size = total - 2;
+    err->stack_symbols = backtrace_symbols(buffer + 2, err->stack_size);
+  } else {
+    err->stack_size = 0;
+    err->stack_symbols = NULL;
+  }
 #else
   err->stack_size = 0;
   err->stack_symbols = NULL;

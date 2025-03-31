@@ -57,6 +57,26 @@ inv lint       # Run static analysis (clang-tidy)
 inv clean      # Remove build & temp files
 ```
 
+## 🧪 Backtrace Decoding (Debugging)
+
+To install required tools:
+
+```bash
+sudo apt install binutils
+```
+
+To decode addresses from a backtrace:
+
+```bash
+echo '[backtrace #0] /home/taba1uga/Github/c_minilib_error/build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace(+0x10bd4b) [0x5da151851d4b]
+[backtrace #1] /home/taba1uga/Github/c_minilib_error/build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace(+0x10bf9e) [0x5da151851f9e]
+[backtrace #2] /home/taba1uga/Github/c_minilib_error/build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace(+0x10bbc0) [0x5da151851bc0]' \
+| grep -oP '\+\K0x[0-9a-f]+' \
+| xargs -I{} addr2line -f -e build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace {}
+```
+
+Replace `/path/to/bin` with the full path to your compiled binary.
+
 ## 📄 License
 
 MIT License. See [LICENSE](LICENSE) for full text.
