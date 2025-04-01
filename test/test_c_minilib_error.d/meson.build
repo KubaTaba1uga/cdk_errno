@@ -7,7 +7,7 @@ test_c_minilib_error_exe = executable('test_c_minilib_error',
    test_runner.process(test_c_minilib_error_name),           
   ],
   dependencies: test_dependencies,
-  link_args: test_link_args,
+  # link_args: test_link_args,
   include_directories: include_directories('../../include'),  
 )
 

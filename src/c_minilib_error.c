@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: MIT
  * See LICENSE file in the project root for full license information.
  */
+#include <asm-generic/errno-base.h>
+#include <asm-generic/errno.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -108,4 +111,67 @@ void cme_error_destroy(struct cme_Error *err) {
 #endif
 
   free(err);
+}
+
+int cme_error_dump(struct cme_Error *err, char *path) {
+  const int total_buffer = 1024;
+  char buffer[total_buffer];
+  int offset = 0;
+  int written_bytes;
+
+  memset(buffer, 0, total_buffer);
+
+  /* Write the initial error dump */
+  written_bytes =
+      snprintf(buffer, total_buffer,
+               "====== ERROR DUMP ======\n"
+               "Error code: %d \n"
+               "Error code stringified: %s \n"
+               "Error message: %s \n"
+               "Src file: %s \n"
+               "Src line: %d \n"
+               "Src func: %s \n",
+               err->code, strerror(err->code), err->msg ? err->msg : "NULL",
+               err->source_file ? err->source_file : "NULL", err->source_line,
+               err->source_func ? err->source_func : "NULL");
+
+  if (written_bytes < 0 || written_bytes >= total_buffer) {
+    return ENOBUFS;
+  }
+  offset = written_bytes;
+
+#ifdef CME_ENABLE_BACKTRACE
+  /* Append a separator (24 '-' characters) */
+  if (offset + 25 >= total_buffer) { // +1 for a newline
+    return ENOBUFS;
+  }
+  memset(buffer + offset, '-', 24);
+  offset += 24;
+  buffer[offset++] = '\n';
+
+  /* Append backtrace symbols */
+  for (int i = 0; i < err->stack_size; i++) {
+    written_bytes = snprintf(buffer + offset, total_buffer - offset, "%s\n",
+                             err->stack_symbols[i]);
+    if (written_bytes < 0 || written_bytes >= total_buffer - offset) {
+      return ENOBUFS;
+    }
+    offset += written_bytes;
+  }
+#endif
+
+  /* Write the full dump to file */
+  FILE *file = fopen(path, "w");
+  if (!file) {
+    return errno;
+  }
+
+  int bytes_written = fwrite(buffer, sizeof(char), offset, file);
+  fclose(file);
+
+  if (bytes_written != offset) {
+    return ENOBUFS;
+  }
+
+  return 0;
 }
