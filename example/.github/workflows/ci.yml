@@ -14,11 +14,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Show working directory
+        run: pwd && ls
+
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y python3-invoke
           inv install
+
+      - name: List invoke tasks
+        run: inv --list
 
       - name: Build project
         run: |
