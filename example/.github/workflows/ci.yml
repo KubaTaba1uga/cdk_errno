@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y python3-invoke
-          sudo inv install
+          inv install
 
       - name: Build project
         run: |
