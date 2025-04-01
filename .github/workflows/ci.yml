@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            clang \
+            clang-format \
+            clang-tidy \
+            meson \
+            ninja-build \
+            binutils \
+            python3-pip
+          pip3 install invoke
+
+      - name: Build project
+        run: |
+          inv build --backtrace --debug
+
+      - name: Run tests
+        run: |
+          inv test
