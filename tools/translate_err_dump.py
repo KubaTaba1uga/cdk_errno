@@ -5,8 +5,8 @@ import sys
 
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: {} <error_dump_file> <executable>".format(sys.argv[0]))
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <error_dump_file> <executable>")
         sys.exit(1)
 
     error_dump_file = sys.argv[1]
@@ -16,27 +16,39 @@ def main():
         with open(error_dump_file, "r") as f:
             lines = f.readlines()
     except Exception as e:
-        print(f"Error opening file {error_dump_file}: {e}")
+        print(f"Error reading file: {e}", file=sys.stderr)
         sys.exit(1)
 
+    # Only parse lines after the separator
+    started = False
+    addresses = list()
+
     for line in lines:
-        line = line.strip()
-        # Extract any addresses inside square brackets like [0x...]
-        matches = re.findall(r"\[0x([0-9a-fA-F]+)\]", line)
-        if matches:
-            # Use the last match (assumed to be the actual backtrace address)
-            addr = "0x" + matches[-1]
-            try:
-                output = subprocess.check_output(
-                    ["addr2line", "-f", "-C", "-e", executable, addr],
-                    universal_newlines=True,
-                )
-                print(f"Address {addr}:")
-                print(output.strip())
-            except subprocess.CalledProcessError as e:
-                print(f"Error processing address {addr}: {e}")
-        else:
-            print("No valid address found in line:", line)
+        if not started:
+            print(line, end="")
+            if line.strip() == "------------------------":
+                started = True
+            continue
+
+        # Extract all addresses inside square brackets
+        matches = re.findall(r"\[0x[0-9a-fA-F]+\]", line)
+        for match in matches:
+            addr = match.strip("[]").lower()
+            addresses.append(addr)
+
+    if not addresses:
+        print("No valid addresses found.")
+        sys.exit(0)
+
+    for addr in addresses:
+        try:
+            output = subprocess.check_output(
+                ["addr2line", "-f", "-e", executable, addr], text=True
+            )
+            print(f"Address {addr}:")
+            print(output.strip())
+        except subprocess.CalledProcessError as e:
+            print(f"Error processing address {addr}: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
