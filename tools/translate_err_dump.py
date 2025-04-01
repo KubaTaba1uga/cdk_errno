@@ -46,7 +46,7 @@ def main():
                 ["addr2line", "-f", "-e", executable, addr], text=True
             )
             print(f"Address {addr}:")
-            print(output.strip())
+            print(output.strip().replace("\n", " "))
         except subprocess.CalledProcessError as e:
             print(f"Error processing address {addr}: {e}", file=sys.stderr)
 

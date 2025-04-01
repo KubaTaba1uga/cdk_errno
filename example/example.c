@@ -18,7 +18,11 @@ void demo_error_logic(void) {
   cme_error_destroy(err);
 }
 
+void func1() { demo_error_logic(); }
+
+void func2() { func1(); }
+
 int main(void) {
-  demo_error_logic();
+  func2();
   return 0;
 }
