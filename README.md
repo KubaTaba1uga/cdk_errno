@@ -57,10 +57,6 @@ inv lint       # Run static analysis (clang-tidy)
 inv clean      # Remove build & temp files
 ```
 
-Here's the updated section with a temporary ASLR change using `echo` and `tee`:
-
----
-
 ## 🧪 Backtrace Decoding (Debugging)
 
 To decode addresses from a dumped backtrace, use the provided Python script:
