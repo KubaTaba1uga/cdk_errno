@@ -26,30 +26,37 @@ static struct cme_Error generic_error = {
     .stack_symbols = NULL,
 };
 
+#define CREATE_GENERIC_ERROR(status_code, err_msg)                             \
+  generic_error.code = (status_code);                                          \
+  generic_error.msg = (err_msg);                                               \
+  generic_error.source_func = (char *)__func__;                                \
+  generic_error.source_line = __LINE__
+
 struct cme_Error *cme_error_create(int code, char *source_file,
                                    char *source_func, int source_line,
                                    char *fmt, ...) {
   struct cme_Error *err = malloc(sizeof(struct cme_Error));
   if (!err) {
-    generic_error.code = ENOMEM;
-    generic_error.msg = "Unable to allocate memory for `struct cme_Error`";
-    generic_error.source_func = (char *)__func__;
-    generic_error.source_line = __LINE__;
+    CREATE_GENERIC_ERROR(ENOMEM,
+                         "Unable to allocate memory for `struct cme_Error`");
     return &generic_error;
   }
 
+  //// Fill error metadata
   err->code = code;
   err->source_line = source_line;
   err->source_file = source_file ? strdup(source_file) : NULL;
   err->source_func = source_func ? strdup(source_func) : NULL;
   err->msg = NULL;
 
+  //// Fill error backtrace
 #ifdef CME_ENABLE_BACKTRACE
-  void *buffer[CME_MAX_BACKTRACE_FRAMES + 2];
-  int total = backtrace(buffer, CME_MAX_BACKTRACE_FRAMES + 2);
-  if (total > 2) {
-    err->stack_size = total - 2;
-    err->stack_symbols = backtrace_symbols(buffer + 2, err->stack_size);
+  // We need to skip two first frames to do not show user this func in trace
+  void *frames_buffer[CME_MAX_BACKTRACE_FRAMES + 2];
+  int total_frames = backtrace(frames_buffer, CME_MAX_BACKTRACE_FRAMES + 2);
+  if (total_frames > 2) {
+    err->stack_size = total_frames - 2;
+    err->stack_symbols = backtrace_symbols(frames_buffer + 2, err->stack_size);
   } else {
     err->stack_size = 0;
     err->stack_symbols = NULL;
@@ -59,6 +66,7 @@ struct cme_Error *cme_error_create(int code, char *source_file,
   err->stack_symbols = NULL;
 #endif
 
+  //// Fill error message
   if (fmt) {
     va_list args;
     va_start(args, fmt);
@@ -67,21 +75,15 @@ struct cme_Error *cme_error_create(int code, char *source_file,
 
     if (len < 0) {
       cme_error_destroy(err);
-      generic_error.code = EINVAL;
-      generic_error.msg = "Invalid `struct cme_Error` variadic args";
-      generic_error.source_func = (char *)__func__;
-      generic_error.source_line = __LINE__;
+      CREATE_GENERIC_ERROR(EINVAL, "Invalid `struct cme_Error` variadic args");
       return &generic_error;
     }
 
     err->msg = malloc(len + 1);
     if (!err->msg) {
       cme_error_destroy(err);
-      generic_error.code = ENOMEM;
-      generic_error.msg =
-          "Unable to allocate memory for `struct cme_Error` message";
-      generic_error.source_func = (char *)__func__;
-      generic_error.source_line = __LINE__;
+      CREATE_GENERIC_ERROR(
+          ENOMEM, "Unable to allocate memory for `struct cme_Error` message");
       return &generic_error;
     }
 
