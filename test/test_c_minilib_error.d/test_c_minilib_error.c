@@ -89,6 +89,8 @@ void test_cme_error_dump_tmp(void) {
   err.source_file = "test_tmp.c";
   err.source_func = "test_tmp_func";
   err.source_line = 100;
+  err.stack_size = 0;
+  err.stack_symbols = NULL;
 
   /* Generate a temporary file path in /tmp */
   char *temp_file = create_temp_file_path();

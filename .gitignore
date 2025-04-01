@@ -8,3 +8,4 @@
 bkp/*
 .cache/*
 build/*
+error_dump.txt

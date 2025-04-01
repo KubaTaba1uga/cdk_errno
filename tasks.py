@@ -52,18 +52,22 @@ def install(c):
 
 
 @task
-def build(c, backtrace=False):
+def build(c, backtrace=False, debug=False):
     """
     Configure and build the project.
 
     Args:
         backtrace (bool): Enable backtrace support. Usage: inv build --backtrace
+        debug (bool): Build with debug symbols. Usage: inv build --debug
     """
     _pr_info("Building...")
 
     _run_command(c, f"mkdir -p {BUILD_PATH}")
     bt_flag = "-Dbacktrace=enabled" if backtrace else "-Dbacktrace=disabled"
-    _run_command(c, f"CC={C_COMPILER} meson setup {BUILD_PATH} {bt_flag}")
+    buildtype_flag = "-Dbuildtype=debug" if debug else ""
+    _run_command(
+        c, f"CC={C_COMPILER} meson setup {BUILD_PATH} {bt_flag} {buildtype_flag}"
+    )
     _run_command(c, f"meson compile -C {BUILD_PATH}")
 
     _pr_info("Build done")

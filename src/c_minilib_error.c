@@ -139,22 +139,24 @@ int cme_error_dump(struct cme_Error *err, char *path) {
   offset = written_bytes;
 
 #ifdef CME_ENABLE_BACKTRACE
-  /* Append a separator (24 '-' characters) */
-  if (offset + 25 >= buffer_max) { // +1 for a newline
-    return ENOBUFS;
-  }
-  memset(buffer + offset, '-', 24);
-  offset += 24;
-  buffer[offset++] = '\n';
-
-  /* Append backtrace symbols */
-  for (int i = 0; i < err->stack_size; i++) {
-    written_bytes = snprintf(buffer + offset, buffer_max - offset, "%s\n",
-                             err->stack_symbols[i]);
-    if (written_bytes < 0 || written_bytes >= buffer_max - offset) {
+  if (err->stack_symbols && err->stack_size) {
+    /* Append a separator (24 '-' characters) */
+    if (offset + 25 >= buffer_max) { // +1 for a newline
       return ENOBUFS;
     }
-    offset += written_bytes;
+    memset(buffer + offset, '-', 24);
+    offset += 24;
+    buffer[offset++] = '\n';
+
+    /* Append backtrace symbols */
+    for (int i = 0; i < err->stack_size; i++) {
+      written_bytes = snprintf(buffer + offset, buffer_max - offset, "%s\n",
+                               err->stack_symbols[i]);
+      if (written_bytes < 0 || written_bytes >= buffer_max - offset) {
+        return ENOBUFS;
+      }
+      offset += written_bytes;
+    }
   }
 #endif
 
