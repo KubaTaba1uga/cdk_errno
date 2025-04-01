@@ -57,25 +57,44 @@ inv lint       # Run static analysis (clang-tidy)
 inv clean      # Remove build & temp files
 ```
 
+Here's the updated section with a temporary ASLR change using `echo` and `tee`:
+
+---
+
 ## 🧪 Backtrace Decoding (Debugging)
 
-To install required tools:
+To decode addresses from a dumped backtrace, use the provided Python script:
+
+```bash
+tools/translate_err_dump.py <error_dump_file> <executable>
+```
+
+**Example:**
+
+```bash
+inv build -b
+./build/example/example
+python3 tools/translate_err_dump.py error_dump.txt build/example/example
+```
+
+Make sure `addr2line` is available:
 
 ```bash
 sudo apt install binutils
 ```
 
-To decode addresses from a backtrace:
+> ℹ️ **Disable ASLR (Address Space Layout Randomization)**  
+Backtrace addresses may vary due to ASLR. For consistent decoding, disable it temporarily (until reboot):
 
 ```bash
-echo '[backtrace #0] /home/taba1uga/Github/c_minilib_error/build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace(+0x10bd4b) [0x5da151851d4b]
-[backtrace #1] /home/taba1uga/Github/c_minilib_error/build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace(+0x10bf9e) [0x5da151851f9e]
-[backtrace #2] /home/taba1uga/Github/c_minilib_error/build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace(+0x10bbc0) [0x5da151851bc0]' \
-| grep -oP '\+\K0x[0-9a-f]+' \
-| xargs -I{} addr2line -f -e build/test/test_c_minilib_error.d/test_c_minilib_error_with_backtrace {}
+echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
 ```
 
-Replace `/path/to/bin` with the full path to your compiled binary.
+To restore the default (enabled):
+
+```bash
+echo 2 | sudo tee /proc/sys/kernel/randomize_va_space
+```
 
 ## 📄 License
 

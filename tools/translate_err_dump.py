@@ -38,7 +38,7 @@ def main():
 
     if not addresses:
         print("No valid addresses found.")
-        sys.exit(0)
+        return
 
     for addr in addresses:
         try:
