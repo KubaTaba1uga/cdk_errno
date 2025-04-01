@@ -17,15 +17,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y \
-            clang \
-            clang-format \
-            clang-tidy \
-            meson \
-            ninja-build \
-            binutils \
-            python3-pip
-          pip3 install invoke
+          sudo apt install -y python3-invoke
+          sudo inv install
 
       - name: Build project
         run: |
