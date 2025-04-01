@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: MIT
  * See LICENSE file in the project root for full license information.
  */
-#include <asm-generic/errno-base.h>
-#include <asm-generic/errno.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -114,16 +112,16 @@ void cme_error_destroy(struct cme_Error *err) {
 }
 
 int cme_error_dump(struct cme_Error *err, char *path) {
-  const int total_buffer = 1024;
-  char buffer[total_buffer];
+  const int buffer_max = 1024;
+  char buffer[buffer_max];
   int offset = 0;
   int written_bytes;
 
-  memset(buffer, 0, total_buffer);
+  memset(buffer, 0, buffer_max);
 
   /* Write the initial error dump */
   written_bytes =
-      snprintf(buffer, total_buffer,
+      snprintf(buffer, buffer_max,
                "====== ERROR DUMP ======\n"
                "Error code: %d \n"
                "Error code stringified: %s \n"
@@ -135,14 +133,14 @@ int cme_error_dump(struct cme_Error *err, char *path) {
                err->source_file ? err->source_file : "NULL", err->source_line,
                err->source_func ? err->source_func : "NULL");
 
-  if (written_bytes < 0 || written_bytes >= total_buffer) {
+  if (written_bytes < 0 || written_bytes >= buffer_max) {
     return ENOBUFS;
   }
   offset = written_bytes;
 
 #ifdef CME_ENABLE_BACKTRACE
   /* Append a separator (24 '-' characters) */
-  if (offset + 25 >= total_buffer) { // +1 for a newline
+  if (offset + 25 >= buffer_max) { // +1 for a newline
     return ENOBUFS;
   }
   memset(buffer + offset, '-', 24);
@@ -151,9 +149,9 @@ int cme_error_dump(struct cme_Error *err, char *path) {
 
   /* Append backtrace symbols */
   for (int i = 0; i < err->stack_size; i++) {
-    written_bytes = snprintf(buffer + offset, total_buffer - offset, "%s\n",
+    written_bytes = snprintf(buffer + offset, buffer_max - offset, "%s\n",
                              err->stack_symbols[i]);
-    if (written_bytes < 0 || written_bytes >= total_buffer - offset) {
+    if (written_bytes < 0 || written_bytes >= buffer_max - offset) {
       return ENOBUFS;
     }
     offset += written_bytes;
@@ -166,10 +164,10 @@ int cme_error_dump(struct cme_Error *err, char *path) {
     return errno;
   }
 
-  int bytes_written = fwrite(buffer, sizeof(char), offset, file);
+  written_bytes = fwrite(buffer, sizeof(char), offset, file);
   fclose(file);
 
-  if (bytes_written != offset) {
+  if (written_bytes != offset) {
     return ENOBUFS;
   }
 
