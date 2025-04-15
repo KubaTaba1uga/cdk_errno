@@ -22,7 +22,13 @@ subdir('src')
 
 add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 
-cmx_error = library('cmx_error', sources, include_directories: ['include'])
+cmx_error_inc = ['include']
+cmx_error_lib = library('cmx_error', sources, include_directories: cmx_error_inc)
+
+cmx_error_dep = declare_dependency(
+  link_with: cmx_error_lib,
+  include_directories: cmx_error_inc
+)
 
 # ******************************************************************************
 # *    Tests
