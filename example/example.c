@@ -3,26 +3,39 @@
 
 #include "c_minilib_error.h"
 
-void demo_error_logic(void) {
-  struct cme_Error *err =
-      cme_errorf(1, "Example error occurred with value: %d", 42);
+typedef struct cme_Error *cme_error_t;
 
-  const char *dump_file = "error_dump.txt";
-  int dump_ret = cme_error_dump(err, (char *)dump_file);
-  if (dump_ret == 0) {
-    printf("Error dump written to '%s'\n", dump_file);
-  } else {
-    printf("Failed to dump error. Error code: %d\n", dump_ret);
-  }
-
-  cme_error_destroy(err);
+cme_error_t error_function(void) {
+  return cme_errorf(1, "Example error occurred with value: %d", 42);
 }
 
-void func1() { demo_error_logic(); }
+cme_error_t good_function(void) { return NULL; }
 
-void func2() { func1(); }
+cme_error_t demo_error_logic(void) {
+  struct cme_Error *err;
+
+  if ((err = good_function())) {
+    return err;
+  }
+
+  if ((err = error_function())) {
+    return err;
+  }
+
+  return NULL;
+}
+
+void app() {
+  cme_error_t err;
+
+  if ((err = demo_error_logic())) {
+    const char *dump_file = "error_dump.txt";
+    cme_error_dump(err, (char *)dump_file);
+    cme_error_destroy(err);
+  }
+}
 
 int main(void) {
-  func2();
+  app();
   return 0;
 }
