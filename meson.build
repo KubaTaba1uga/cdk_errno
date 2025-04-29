@@ -43,5 +43,5 @@ endif
 # *    Example
 # ******************************************************************************
 if get_option('examples')
-    subdir('examples')
+    subdir('example')
 endif
