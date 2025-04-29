@@ -52,7 +52,7 @@ def install(c):
 
 
 @task
-def build(c, backtrace=False, debug=False):
+def build(c, backtrace=False, debug=False, tests=False, examples=False):
     """
     Configure and build the project.
 
@@ -63,21 +63,42 @@ def build(c, backtrace=False, debug=False):
     _pr_info("Building...")
 
     _run_command(c, f"mkdir -p {BUILD_PATH}")
-    bt_flag = "-Dbacktrace=enabled" if backtrace else "-Dbacktrace=disabled"
-    buildtype_flag = "-Dbuildtype=debug" if debug else ""
-    _run_command(
-        c, f"CC={C_COMPILER} meson setup {BUILD_PATH} {bt_flag} {buildtype_flag}"
-    )
+
+    setup_command = f"CC={C_COMPILER} meson setup {BUILD_PATH}"
+
+    if backtrace:
+        setup_command = f"{setup_command} -Dbacktrace=true"
+
+    if debug:
+        setup_command = f"{setup_command} -Db_sanitize=address,undefined -Db_lundef=false -Dbuildtype=debug"
+    else:
+        setup_command = f"{setup_command} -Dbuildtype=release"
+
+    if tests:
+        setup_command = f"{setup_command} -Dtests=true"
+
+    if examples:
+        setup_command = f"{setup_command} -Dexamples=true"
+
+    _run_command(c, setup_command)
     _run_command(c, f"meson compile -C {BUILD_PATH}")
 
     _pr_info("Build done")
 
 
-@task
-def test(c):
+@task(iterable=["name"])
+def test(c, name=None):
     _pr_info("Testing...")
 
-    _run_command(c, f"meson test -C {BUILD_PATH}")
+    # Base test command
+    cmd = f"meson test -C {BUILD_PATH} --verbose"
+
+    # Add test name(s) if provided
+    if name:
+        name_args = " ".join(name)
+        cmd += f" {name_args}"
+
+    _run_command(c, cmd)
 
     _pr_info("Testing done")
 

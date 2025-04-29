@@ -14,7 +14,7 @@ project('c_minilib_error', 'c',
 # ******************************************************************************
 # *    Library
 # ******************************************************************************
-if get_option('backtrace').enabled()
+if get_option('backtrace')
   add_project_arguments('-DCME_ENABLE_BACKTRACE', language: 'c')
 endif
 
@@ -22,20 +22,26 @@ subdir('src')
 
 add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 
-cmx_error_inc = ['include']
-cmx_error_lib = library('cmx_error', sources, include_directories: cmx_error_inc)
+c_minilib_error_inc = ['include']
 
-cmx_error_dep = declare_dependency(
-  link_with: cmx_error_lib,
-  include_directories: cmx_error_inc
+c_minilib_error_lib = library('c_minilib_error', sources, include_directories: c_minilib_error_inc)
+
+c_minilib_error_dep = declare_dependency(
+  link_with: c_minilib_error_lib,
+  include_directories: c_minilib_error_inc
 )
 
 # ******************************************************************************
 # *    Tests
 # ******************************************************************************
-subdir('test')
+if get_option('tests')
+   subdir('test')
+endif
+
 
 # ******************************************************************************
 # *    Example
 # ******************************************************************************
-subdir('example')
+if get_option('examples')
+    subdir('examples')
+endif

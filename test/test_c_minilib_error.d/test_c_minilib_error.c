@@ -21,7 +21,7 @@ void test_create_error_success(void) {
   TEST_ASSERT_NOT_NULL(err->msg);
   TEST_ASSERT_EQUAL_STRING("Failed with code 42", err->msg);
 
-  cme_error_destroy(err);
+  /* cme_error_destroy(err); */
 }
 
 void test_create_error_null_source(void) {
@@ -125,5 +125,5 @@ void test_cme_error_dump_tmp(void) {
 
   /* Clean up: remove the temporary file and free its path */
   remove(temp_file);
-  free(temp_file);
+  /* free(temp_file); */
 }

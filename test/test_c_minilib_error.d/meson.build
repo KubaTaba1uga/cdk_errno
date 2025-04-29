@@ -7,7 +7,6 @@ test_c_minilib_error_exe = executable('test_c_minilib_error',
    test_runner.process(test_c_minilib_error_name),           
   ],
   dependencies: test_dependencies,
-  link_args: test_link_args,
   include_directories: include_directories('../../include'),  
 )
 
@@ -22,7 +21,6 @@ test_c_minilib_error_with_backtrace_exe = executable('test_c_minilib_error_with_
    test_runner.process(test_c_minilib_error_with_backtrace_name),           
   ],
   dependencies: test_dependencies,
-  link_args: test_link_args,
   c_args: ['-DCME_ENABLE_BACKTRACE'],  
   include_directories: include_directories('../../include'),  
 )
