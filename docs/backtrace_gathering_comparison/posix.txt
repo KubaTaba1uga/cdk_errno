@@ -1,0 +1,19 @@
+POSIX backtrace: total time = 664.21 ms, avg time = 6642.11 ns over 100000 iterations
+Example POSIX backtrace (raw addresses):
+------------------------
+[0x40119e]
+[0x4011d2]
+[0x401200]
+[0x40122e]
+[0x40125c]
+[0x40128a]
+[0x4012b8]
+[0x4012e6]
+[0x401314]
+[0x401342]
+[0x401370]
+[0x40139e]
+[0x4013cc]
+[0x4013fa]
+[0x401428]
+[0x401456]
