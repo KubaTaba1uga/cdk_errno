@@ -82,20 +82,12 @@ static inline int cme_capture_backtrace(void **out, int max) {
 
 // Dump backtrace to file
 static inline void cme_dump_backtrace(FILE *f, int count, void **addrs) {
-
   if (!f || count <= 0 || !addrs)
     return;
 
   fprintf(f, "------------------------\n");
   for (int i = 0; i < count; ++i) {
-    Dl_info info;
-    void *addr = addrs[i];
-    if (dladdr(addr, &info) && info.dli_sname) {
-      unsigned long off = (char *)addr - (char *)info.dli_saddr;
-      fprintf(f, "%s+0x%lx [%p]\n", info.dli_sname, off, addr);
-    } else {
-      fprintf(f, "?? [%p]\n", addr);
-    }
+    fprintf(f, "[%p]\n", addrs[i]);
   }
 }
 #endif

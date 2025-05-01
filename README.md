@@ -96,3 +96,14 @@ echo 2 | sudo tee /proc/sys/kernel/randomize_va_space
 
 MIT License. See [LICENSE](LICENSE) for full text.
 
+
+
+## Tracebacks checklist
+
+To be sure that traces are decodable to lines perform these steps.
+
+1. Ensure you have -no-pie built executable:
+```
+readelf -h build/test_static_backtrace | grep Type:
+# now you should see ET_EXEC
+```

@@ -6,6 +6,7 @@
 
 #define CME_STACK_MAX 2
 #define CME_STR_MAX 256
+
 // Because we want to hit cpu hot cache when operating on error
 // error should be less than 32kib, as this is most common
 // 64bit system L1 cache these days.

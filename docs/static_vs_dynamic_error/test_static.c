@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 
 #ifdef CME_ENABLE_BACKTRACE
     printf("---- DUMPING STACKTRACE FOR ERROR #%d ----\n", i);
-    cme_static_error_dump(errors[0], "/dev/stdout");
+    cme_static_error_dump(errors[0], "error_dump.txt");
 #endif
 
     /* // Create errors */
