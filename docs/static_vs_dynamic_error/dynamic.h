@@ -1,12 +1,12 @@
 /* dynamic.h */
 #ifndef C_MINILIB_DYNAMIC_ERROR_H
 #define C_MINILIB_DYNAMIC_ERROR_H
-
+#include <stdlib.h> 
 #include <stdint.h>
 #include <stdio.h>
 
 /* how many frames to capture at most */
-#define CME_STACK_MAX 2
+#define CME_STACK_MAX 6
 
 // Because we want to hit cpu hot cache when operating on error
 // error should be less than 32kib, as this is most common
@@ -41,5 +41,30 @@ int cme_dynamic_error_dump(cme_dynamic_error_t err, const char *path);
                            ##__VA_ARGS__)
 
 
+static inline cme_dynamic_error_t cme_return(cme_dynamic_error_t err) {
+#ifndef CME_ENABLE_BACKTRACE
+  return err;
+#else
+  if (!err)
+    return err;
+
+  if (err->stack_length < CME_STACK_MAX) {
+    void *frame = __builtin_frame_address(0);
+    void *ret = *((void **)frame + 1);
+    void **stack = err->stack_symbols;
+
+    if (!stack) {
+      stack = malloc(sizeof(void *) * CME_STACK_MAX);
+      if (!stack)
+        return err;
+      err->stack_symbols = stack;
+    }
+
+    stack[err->stack_length++] = ret;
+  }
+
+  return err;
+#endif
+}
 
 #endif // C_MINILIB_DYNAMIC_ERROR_H

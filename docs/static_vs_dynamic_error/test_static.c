@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "common.h"
+#include "levels.h"
 #include "static.h"
 
 #define USAGE_MSG                                                              \
@@ -13,32 +14,51 @@
   "  --max     Total number of errors to allocate\n"                           \
   "  --batch   Free every B errors (for immediate free, use --batch==--max)\n"
 
-// Propably better write something like return cme(err)
-__attribute__((noinline)) static cme_static_error_t level3(int i) {
-  cme_static_error_t err = cme_static_errorf(123, "err %d", i);
-  cme_return(err);
-}
+static double run_benchmark(cme_static_error_t (*fn)(int), int max, int batch) {
+  long long start_ns = cme_now_ns();
 
-__attribute__((noinline)) static cme_static_error_t level2(int i) {
-  cme_static_error_t err = level3(i);
-  cme_return(err);
-}
+  for (int i = 0; i < max; i += batch) {
+    int current_batch = (i + batch <= max) ? batch : (max - i);
+    cme_static_error_t *errors =
+        malloc(sizeof(cme_static_error_t *) * current_batch);
+    if (!errors) {
+      perror("malloc failed");
+      exit(1);
+    }
 
-__attribute__((noinline)) static cme_static_error_t level1(int i) {
-  cme_static_error_t err = level2(i);
-  cme_return(err);
-}
+    for (int j = 0; j < current_batch; ++j) {
+      errors[j] = fn(i + j);
+    }
 
-__attribute__((noinline)) static cme_static_error_t some_function(int i) {
-  cme_static_error_t err = level1(i);
-  cme_return(err);
+    for (int j = 0; j < current_batch; ++j) {
+      cme_static_error_t err = errors[j];
+      size_t a = strlen(err->msg);
+      size_t b = a + strlen(err->source_file);
+      size_t c = b + strlen(err->source_func);
+      a += c;
+    }
+
+    if (i == 0 && fn == some_function_backtrace) {
+      cme_static_error_dump(errors[0], "backtrace_dump.txt");
+    } else if (i == 0 && fn == some_function_frameptr) {
+      cme_static_error_dump(errors[0], "frameptr_dump.txt");
+    }
+
+    for (int j = 0; j < current_batch; ++j) {
+      cme_static_error_destroy(errors[j]);
+    }
+
+    free(errors);
+  }
+
+  long long end_ns = cme_now_ns();
+  return (end_ns - start_ns) / 1e6; // ms
 }
 
 int main(int argc, char **argv) {
   int max = 0;
   int batch = 0;
 
-  // Parse command-line arguments
   for (int i = 1; i < argc; ++i) {
     if (strncmp(argv[i], "--max=", 6) == 0) {
       max = atoi(argv[i] + 6);
@@ -52,60 +72,27 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  long long start_ns = cme_now_ns();
-
-  for (int i = 0; i < max; i += batch) {
-    int current_batch = (i + batch <= max) ? batch : (max - i);
-
-    // Allocate array of error pointers
-    cme_static_error_t *errors =
-        malloc(sizeof(cme_static_error_t *) * current_batch);
-    if (!errors) {
-      perror("malloc failed");
-      return 1;
-    }
-
-    // Create errors
-    for (int j = 0; j < current_batch; ++j) {
-      errors[j] = some_function(i + j);
-    }
-
-    // We need to touch values to elevate cpu hot cache, if you comment this
-    //  out you will see how much touching defragmented memory costs.
-    for (int j = 0; j < current_batch; ++j) {
-      cme_static_error_t err = errors[j];
-      size_t a = strlen(err->msg);
-      size_t b = a + strlen(err->source_file);
-      size_t c = b + strlen(err->source_func);
-      a += c;
-    }
-
-#ifdef CME_ENABLE_BACKTRACE
-    printf("---- DUMPING STACKTRACE FOR ERROR #%d ----\n", i);
-    cme_static_error_dump(errors[0], "error_dump.txt");
-#endif
-
-    /* // Create errors */
-    /* for (int j = 0; j < current_batch; ++j) { */
-    /* } */
-
-    // Destroy errors
-    for (int j = 0; j < current_batch; ++j) {
-      cme_static_error_destroy(errors[j]);
-    }
-
-    free(errors);
-  }
-
-  long long end_ns = cme_now_ns();
-  double elapsed_ms = (end_ns - start_ns) / 1e6;
-
+  printf("Running static error allocation benchmark (frameptr)...\n");
+  double time_fp = run_benchmark(some_function_frameptr, max, batch);
   printf("Static error allocation test complete:\n");
   printf("  Total errors: %d\n", max);
   printf("  Batch size: %d\n", batch);
   printf("  Bytes per batch: %zu bytes\n",
          sizeof(struct cme_StaticError) * batch);
-  printf("  Time elapsed: %.4f ms\n", elapsed_ms);
+  printf("  Time elapsed: %.4f ms\n", time_fp);
+
+  printf("\nRunning static error allocation benchmark (glibc backtrace)...\n");
+  double time_bt = run_benchmark(some_function_backtrace, max, batch);
+  printf("Static error allocation test complete:\n");
+  printf("  Total errors: %d\n", max);
+  printf("  Batch size: %d\n", batch);
+  printf("  Bytes per batch: %zu bytes\n",
+         sizeof(struct cme_StaticError) * batch);
+  printf("  Time elapsed: %.4f ms\n", time_bt);
+
+  double delta = (time_bt - time_fp) / time_fp * 100.0;
+  printf("\nComparison summary:\n");
+  printf("  Δ time (glibc - frameptr): %.1f%%\n", delta);
 
   return 0;
 }

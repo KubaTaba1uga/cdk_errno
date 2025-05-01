@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#define CME_STACK_MAX 2
+#define CME_STACK_MAX 6
 #define CME_STR_MAX 256
 
 // Because we want to hit cpu hot cache when operating on error
@@ -47,35 +47,21 @@ int cme_static_error_dump(cme_static_error_t err, const char *path);
   cme_static_error_create((code), __FILE__, __func__, __LINE__, (fmt),         \
                           ##__VA_ARGS__)
 
+static inline cme_static_error_t cme_return(cme_static_error_t err) {
 #ifndef CME_ENABLE_BACKTRACE
-#define cme_return(err)                                                        \
-  do {                                                                         \
-    return (err);                                                              \
-  } while (0)
+  return err;
 #else
-#define cme_return(err)                                                        \
-  do {                                                                         \
-    if (!(err))                                                                \
-      return (err);                                                            \
-    if ((err)->stack_length < CME_STACK_MAX) {                                 \
-      /* get this function’s frame base */                                   \
-      void *frame = __builtin_frame_address(0);                                \
-      /* load the saved return address at [frame + 1*sizeof(void*)] */         \
-      void *ret = *((void **)frame + 1);                                       \
-      (err)->stack_symbols[(err)->stack_length++] = ret;                       \
-    }                                                                          \
-    return (err);                                                              \
-  } while (0)
+  if (!err)
+    return err;
+
+  if (err->stack_length < CME_STACK_MAX) {
+    void *frame = __builtin_frame_address(0);
+    void *ret = *((void **)frame + 1);
+    err->stack_symbols[err->stack_length++] = ret;
+  }
+
+  return err;
 #endif
-/* #define cme_return(err) \ */
-/*   do { \ */
-/*     if (!(err)) \ */
-/*       return (err); \ */
-/*     if ((err)->stack_length < CME_STACK_MAX) \ */
-/*       (err)->stack_symbols[(err)->stack_length++] = \ */
-/*           __builtin_frame_address(0); \ */
-/*     return (err); \ */
-/*   } while (0) */
-/* #endif */
+}
 
 #endif // C_MINILIB_STATIC_ERROR_H
