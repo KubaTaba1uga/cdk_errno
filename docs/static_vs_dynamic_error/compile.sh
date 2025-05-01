@@ -4,7 +4,8 @@ set -xeu
 
 rm -rf build
 
-meson setup build
+# meson setup build -Dbuildtype=release
+meson setup build -Dbuildtype=debug -Db_pie=false
 
-meson compile -C build
+meson compile -v -C build
 

@@ -1,8 +1,6 @@
 #ifndef C_MINILIB_COMMON_H
 #define C_MINILIB_COMMON_H
 
-#define _POSIX_C_SOURCE 200809L
-
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>

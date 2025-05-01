@@ -1,3 +1,4 @@
+#include <stddef.h>
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,27 @@
   "Usage: %s --max=N --batch=B\n"                                              \
   "  --max     Total number of errors to allocate\n"                           \
   "  --batch   Free every B errors (for immediate free, use --batch==--max)\n"
+
+// Propably better write something like return cme(err)
+__attribute__((noinline)) static cme_static_error_t level3(int i) {
+  cme_static_error_t err = cme_static_errorf(123, "err %d", i);
+  cme_return(err);
+}
+
+__attribute__((noinline)) static cme_static_error_t level2(int i) {
+  cme_static_error_t err = level3(i);
+  cme_return(err);
+}
+
+__attribute__((noinline)) static cme_static_error_t level1(int i) {
+  cme_static_error_t err = level2(i);
+  cme_return(err);
+}
+
+__attribute__((noinline)) static cme_static_error_t some_function(int i) {
+  cme_static_error_t err = level1(i);
+  cme_return(err);
+}
 
 int main(int argc, char **argv) {
   int max = 0;
@@ -45,13 +67,33 @@ int main(int argc, char **argv) {
 
     // Create errors
     for (int j = 0; j < current_batch; ++j) {
-      errors[j] = cme_static_errorf(123, "error #%d", i + j);
+      errors[j] = some_function(i + j);
     }
+
+    // We need to touch values to elevate cpu hot cache, if you comment this
+    //  out you will see how much touching defragmented memory costs.
+    for (int j = 0; j < current_batch; ++j) {
+      cme_static_error_t err = errors[j];
+      size_t a = strlen(err->msg);
+      size_t b = a + strlen(err->source_file);
+      size_t c = b + strlen(err->source_func);
+      a += c;
+    }
+
+#ifdef CME_ENABLE_BACKTRACE
+    printf("---- DUMPING STACKTRACE FOR ERROR #%d ----\n", i);
+    cme_static_error_dump(errors[0], "/dev/stdout");
+#endif
+
+    /* // Create errors */
+    /* for (int j = 0; j < current_batch; ++j) { */
+    /* } */
 
     // Destroy errors
     for (int j = 0; j < current_batch; ++j) {
       cme_static_error_destroy(errors[j]);
     }
+
     free(errors);
   }
 

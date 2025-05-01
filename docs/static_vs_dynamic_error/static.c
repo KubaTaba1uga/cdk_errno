@@ -1,6 +1,7 @@
-#define _POSIX_C_SOURCE 200809L
-#include "static.h"
+#include <string.h>
+
 #include "common.h"
+#include "static.h"
 
 cme_static_error_t cme_static_error_create(int code, const char *file,
                                            const char *func, int line,
@@ -11,8 +12,9 @@ cme_static_error_t cme_static_error_create(int code, const char *file,
 
   err->code = code;
   err->source_line = line;
-  err->source_file = file;
-  err->source_func = func;
+
+  strncpy(err->source_file, file, CME_STR_MAX);
+  strncpy(err->source_func, func, CME_STR_MAX);
 
   if (fmt) {
     va_list args;
@@ -24,12 +26,7 @@ cme_static_error_t cme_static_error_create(int code, const char *file,
     err->msg[CME_STR_MAX - 1] = '\0';
   }
 
-#ifdef CME_ENABLE_BACKTRACE
-  err->stack_length =
-      cme_capture_backtrace(err->stack_addrs, CME_STACK_MAX, NULL);
-#else
   err->stack_length = 0;
-#endif
 
   return err;
 }
@@ -49,7 +46,7 @@ int cme_static_error_dump(cme_static_error_t err, const char *path) {
   CME_DUMP_COMMON_FIELDS(file, err);
 
 #ifdef CME_ENABLE_BACKTRACE
-  cme_dump_backtrace(file, err->stack_length, err->stack_addrs);
+  cme_dump_backtrace(file, err->stack_length, err->stack_symbols);
 #endif
 
   fclose(file);

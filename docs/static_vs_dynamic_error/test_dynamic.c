@@ -39,20 +39,32 @@ int main(int argc, char **argv) {
     for (int j = 0; j < current_batch; ++j) {
       errors[j] = cme_dynamic_errorf(123, "error #%d", i + j);
     }
+
+    // We need to touch values to elevate cpu hot cache, if you comment this
+    //  out you will see how much touching defragmented memory costs.
+    for (int j = 0; j < current_batch; ++j) {
+      cme_dynamic_error_t err = errors[j];
+      size_t a = strlen(err->msg);
+      size_t b = a + strlen(err->source_file);
+      size_t c = b + strlen(err->source_func);
+      a += c;
+    }
+
     for (int j = 0; j < current_batch; ++j) {
       cme_dynamic_error_destroy(errors[j]);
     }
+
     free(errors);
   }
 
   long long end_ns = cme_now_ns();
-  double elapsed_ms = (end_ns - start_ns) / 1e6;
+  long long elapsed_ns = (end_ns - start_ns);
 
   printf("Dynamic error allocation test complete:\n");
   printf("  Total: %d errors\n", max);
   printf("  Batch size: %d\n", batch);
   printf("  Bytes per batch: %zu bytes\n",
          sizeof(struct cme_DynamicError) * batch);
-  printf("  Time elapsed: %.4f ms\n", elapsed_ms);
+  printf("  Time elapsed:  %llds\n", elapsed_ns);
   return 0;
 }

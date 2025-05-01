@@ -1,23 +1,22 @@
 /* dynamic.c */
-#define _POSIX_C_SOURCE 200809L
 #include "dynamic.h"
 #include "common.h"
 
 static struct cme_DynamicError generic_error = {
     .code = -1,
     .msg = "Generic dynamic error",
-    .source_file = __FILE__,
+    .source_file = (char *)__FILE__,
     .source_func = NULL,
     .source_line = 0,
     .stack_length = 0,
-    .stack_addrs = NULL,
+    .stack_symbols = NULL,
 };
 
 #define CREATE_GENERIC_ERROR(code_, msg_)                                      \
   do {                                                                         \
     generic_error.code = (code_);                                              \
     generic_error.msg = (msg_);                                                \
-    generic_error.source_func = __func__;                                      \
+    generic_error.source_func = (char *)__func__;                              \
     generic_error.source_line = __LINE__;                                      \
   } while (0)
 
@@ -32,8 +31,8 @@ cme_dynamic_error_t cme_dynamic_error_create(int code, const char *file,
 
   err->code = code;
   err->source_line = line;
-  err->source_file = file;
-  err->source_func = func;
+  err->source_file = strdup(file);
+  err->source_func = strdup(func);
 
   if (fmt) {
     va_list ap;
@@ -62,17 +61,17 @@ cme_dynamic_error_t cme_dynamic_error_create(int code, const char *file,
   }
 
 #ifdef CME_ENABLE_BACKTRACE
-  void *stack_addrs[CME_STACK_MAX];
-  err->stack_length = cme_capture_backtrace(stack_addrs, CME_STACK_MAX);
+  void *stack_symbols[CME_STACK_MAX];
+  err->stack_length = cme_capture_backtrace(stack_symbols, CME_STACK_MAX);
   size_t stack_size = sizeof(void *) * err->stack_length;
-  err->stack_addrs = malloc(stack_size);
-  if (!err->stack_addrs) {
+  err->stack_symbols = malloc(stack_size);
+  if (!err->stack_symbols) {
     free(err);
     CREATE_GENERIC_ERROR(ENOMEM, "Alloc stack_addres failed");
     return &generic_error;
   }
 
-  memcpy(err->stack_addrs, stack_addrs, stack_size);
+  memcpy(err->stack_symbols, stack_symbols, stack_size);
 #else
   err->stack_length = 0;
 #endif
@@ -84,8 +83,10 @@ void cme_dynamic_error_destroy(cme_dynamic_error_t err) {
   if (!err || err == &generic_error)
     return;
   free(err->msg);
+  free(err->source_file);
+  free(err->source_func);
 #ifdef CME_ENABLE_BACKTRACE
-  free(err->stack_addrs);
+  free(err->stack_symbols);
 #endif
   free(err);
 }
@@ -101,7 +102,7 @@ int cme_dynamic_error_dump(cme_dynamic_error_t err, const char *path) {
   CME_DUMP_COMMON_FIELDS(f, err);
 
 #ifdef CME_ENABLE_BACKTRACE
-  cme_dump_backtrace(f, err->stack_length, err->stack_addrs);
+  cme_dump_backtrace(f, err->stack_length, err->stack_symbols);
 #endif
 
   fclose(f);
