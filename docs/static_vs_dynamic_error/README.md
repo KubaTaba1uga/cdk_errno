@@ -37,9 +37,6 @@ This repository contains a complete benchmark suite to compare two error‑alloc
    - `malloc(sizeof *err)` + `malloc`/`strdup` for each string field.
    - `destroy` frees each field, then the struct.
 
-Here’s a drop-in replacement for the *Benchmark plan* section that drops the redundant binary-name columns (the drivers are always `test_static` and `test_dynamic`).
-
-```markdown
 ### Benchmark plan
 
 The benchmark set is split into three layers—single-thread micro-cases, multi-thread scalability, and an empty results matrix.
@@ -47,23 +44,23 @@ The benchmark set is split into three layers—single-thread micro-cases, multi-
 #### 1 — Single-thread burst tests (realistic live-set ≤ 8)  
 *Measures per-error latency and cache behaviour when only a handful of errors coexist.*
 
-| Scenario (single thread) | Total errors `--max` | Live errors `--batch` |
-|--------------------------|----------------------|-----------------------|
-| Cold-start / immediate free | 10 000 | 1 |
-| Tiny burst (call-stack propagation) | 10 000 | 4 |
-| Occasional cascade | 10 000 | 8 |
+| Scenario (single thread)            | Total errors `--max` | Live errors `--batch` |
+|-------------------------------------|----------------------|-----------------------|
+| Cold-start / immediate free         |      10 000          |           1           |
+| Tiny burst (call-stack propagation) |      10 000          |           4           |
+| Occasional cascade                  |      10 000          |           8           |
 
 ---
 
 #### 2 — Thread-scalability burst-1 test  
 *Evaluates allocator contention and scalability when many worker threads each create one live error at a time.*
 
-| Threads | Errors per thread | Total errors | Note |
-|---------|------------------|--------------|------|
-| 1 | 10 000 | 10 000 | baseline |
-| 2 | 10 000 | 20 000 | allocator contention |
-| 4 | 10 000 | 40 000 | typical CPU |
-| 8 | 10 000 | 80 000 | stress test |
+| Threads | Errors per thread | Total errors |         Note         |
+|---------|-------------------|--------------|----------------------|
+|    1    |       10 000      |     10 000   | baseline             |
+|    2    |       10 000      |     20 000   | allocator contention |
+|    4    |       10 000      |     40 000   | typical CPU          |
+|    8    |       10 000      |     80 000   | stress test          |
 
 *(Each thread runs the burst-1 loop in `test_static` or `test_dynamic`; join at the end.)*
 
