@@ -24,8 +24,12 @@ struct __attribute__((aligned(8))) cme_StaticError {
   void **stack_symbols;  // 64/8 = 8 bytes
 #endif
 };
-// If CME_ENABLED_BACKTRACE defined we have 4+255+8+8+4+4+128 = 412 bytes.
-// If not we have 4+256+8+8+4+4+8 = 292 bytes
+// If CME_ENABLED_BACKTRACE defined we have 4+256+8+8+4+4+128 = 412 bytes.
+// If not we have 4+256+8+8+4+4+8 = 292 bytes.
+// Because 412%8!=0 nor 292%8!=0 we need to align our struct to 8 bytes
+//  via compiler `aligned` attribute.
+
+// Maybe we should copu source_file and func_file in so the memory is nearer?
 
 typedef struct cme_StaticError *cme_static_error_t;
 

@@ -2,20 +2,27 @@
 #ifndef C_MINILIB_DYNAMIC_ERROR_H
 #define C_MINILIB_DYNAMIC_ERROR_H
 
+#include <stdint.h>
 #include <stdio.h>
 
 /* how many frames to capture at most */
-#define CME_STACK_MAX 32
+#define CME_STACK_MAX 16
 
-struct cme_DynamicError {
-  int code;
-  char *msg;
-  const char *source_file;
-  const char *source_func;
-  int source_line;
-  int stack_length;
-  void **stack_addrs;
+// Because we want to hit cpu hot cache when operating on error
+// error should be less than 32kib, as this is most common
+// 64bit system L1 cache these days.
+struct __attribute__((aligned(8))) cme_DynamicError {
+  int32_t code;            // 32/8 = 4 bytes
+  char *msg;               // 64/8 = 8 bytes
+  const char *source_file; // 64/8 = 8 bytes
+  const char *source_func; // 64/8 = 8 bytes
+  int32_t source_line;     // 32/8 = 4 bytes
+  int32_t stack_length;    // 32/8 = 4 bytes
+  void **stack_addrs;      // 64/8 = 8 bytes
 };
+// We have 4+8+8+8+4+4+8 = 44 bytes.
+// Because 44%8!=0 we need to align our struct to 8 bytes
+//  via compiler `aligned` attribute.
 
 typedef struct cme_DynamicError *cme_dynamic_error_t;
 
