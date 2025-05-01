@@ -51,6 +51,8 @@ int main(int argc, char **argv) {
   printf("Dynamic error allocation test complete:\n");
   printf("  Total: %d errors\n", max);
   printf("  Batch size: %d\n", batch);
+  printf("  Bytes per batch: %zu bytes\n",
+         sizeof(struct cme_DynamicError) * batch);
   printf("  Time elapsed: %.4f ms\n", elapsed_ms);
   return 0;
 }

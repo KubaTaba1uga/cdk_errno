@@ -22,7 +22,9 @@ struct __attribute__((aligned(8))) cme_DynamicError {
 };
 // We have 4+8+8+8+4+4+8 = 44 bytes.
 // Because 44%8!=0 we need to align our struct to 8 bytes
-//  via compiler `aligned` attribute.
+//  via compiler `aligned` attribute so it becomes 48 bytes.
+// But size of the struct is not fully reflecting real size of error
+// because each string also takes memory.
 
 typedef struct cme_DynamicError *cme_dynamic_error_t;
 

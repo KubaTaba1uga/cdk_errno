@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
   int max = 0;
   int batch = 0;
 
-  // Parse args
+  // Parse command-line arguments
   for (int i = 1; i < argc; ++i) {
     if (strncmp(argv[i], "--max=", 6) == 0) {
       max = atoi(argv[i] + 6);
@@ -35,20 +35,23 @@ int main(int argc, char **argv) {
   for (int i = 0; i < max; i += batch) {
     int current_batch = (i + batch <= max) ? batch : (max - i);
 
-    cme_static_error_t *errors = malloc(sizeof(void *) * current_batch);
+    // Allocate array of error pointers
+    cme_static_error_t *errors =
+        malloc(sizeof(cme_static_error_t *) * current_batch);
     if (!errors) {
       perror("malloc failed");
       return 1;
     }
 
+    // Create errors
     for (int j = 0; j < current_batch; ++j) {
       errors[j] = cme_static_errorf(123, "error #%d", i + j);
     }
 
+    // Destroy errors
     for (int j = 0; j < current_batch; ++j) {
       cme_static_error_destroy(errors[j]);
     }
-
     free(errors);
   }
 
@@ -56,8 +59,10 @@ int main(int argc, char **argv) {
   double elapsed_ms = (end_ns - start_ns) / 1e6;
 
   printf("Static error allocation test complete:\n");
-  printf("  Total: %d errors\n", max);
+  printf("  Total errors: %d\n", max);
   printf("  Batch size: %d\n", batch);
+  printf("  Bytes per batch: %zu bytes\n",
+         sizeof(struct cme_StaticError) * batch);
   printf("  Time elapsed: %.4f ms\n", elapsed_ms);
 
   return 0;

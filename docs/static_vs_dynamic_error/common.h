@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <time.h>
 
 #ifdef CME_ENABLE_BACKTRACE
@@ -36,6 +37,15 @@ static inline long long cme_now_ns(void) {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+static inline long cme_now_mem_kb(void) {
+  struct rusage r;
+  if (getrusage(RUSAGE_SELF, &r) != 0) {
+    return -1; /* error */
+  }
+  /* On Linux, ru_maxrss is already in KB */
+  return r.ru_maxrss;
 }
 
 // Format message into preallocated buffer (va_list variant)
