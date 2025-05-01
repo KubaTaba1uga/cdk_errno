@@ -33,10 +33,9 @@ static struct cme_Error generic_error = {
   generic_error.source_func = (char *)__func__;                                \
   generic_error.source_line = __LINE__
 
-struct cme_Error *cme_error_create(int code, char *source_file,
-                                   char *source_func, int source_line,
-                                   char *fmt, ...) {
-  struct cme_Error *err = malloc(sizeof(struct cme_Error));
+cme_error_t cme_error_create(int code, char *source_file, char *source_func,
+                             int source_line, char *fmt, ...) {
+  cme_error_t err = malloc(sizeof(struct cme_Error));
   if (!err) {
     CREATE_GENERIC_ERROR(ENOMEM,
                          "Unable to allocate memory for `struct cme_Error`");
@@ -96,7 +95,7 @@ struct cme_Error *cme_error_create(int code, char *source_file,
   return err;
 }
 
-void cme_error_destroy(struct cme_Error *err) {
+void cme_error_destroy(cme_error_t err) {
   if (!err || err == &generic_error)
     return;
 
@@ -111,7 +110,7 @@ void cme_error_destroy(struct cme_Error *err) {
   free(err);
 }
 
-int cme_error_dump(struct cme_Error *err, char *path) {
+int cme_error_dump(cme_error_t err, char *path) {
   const int buffer_max = 1024;
   char buffer[buffer_max];
   int offset = 0;

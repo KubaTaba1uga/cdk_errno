@@ -81,7 +81,7 @@ def build(c, backtrace=False, debug=False, tests=False, examples=False):
         setup_command = f"{setup_command} -Dexamples=true"
 
     _run_command(c, setup_command)
-    _run_command(c, f"meson compile -C {BUILD_PATH}")
+    _run_command(c, f"meson compile -v -C {BUILD_PATH}")
 
     _pr_info("Build done")
 
@@ -160,6 +160,7 @@ def clean(c, extra=""):
         inv clean --extra='**/*.log'
     """
     patterns = [
+        "example/build/*",
         "build/*",
         "**/*~",
         "**/#*",
