@@ -1,9 +1,19 @@
+#!/usr/bin/env python3
+import argparse
 import re
 import statistics
 import subprocess
 
+"""
+Single-threaded Error-Allocation Benchmark
+Measures and compares the runtime overhead (ms) of two allocation strategies:
+  - Static buffer: single malloc per error
+  - Dynamic fields: malloc per string field
+Outputs a padded Markdown table with average times and percentage delta.
+"""
 
-def run_and_parse(cmd):
+
+def run_and_time(cmd):
     """
     Runs the given command (list) and parses the elapsed time in ms from its output.
     Returns the elapsed time as float.
@@ -22,52 +32,84 @@ def run_and_parse(cmd):
     raise RuntimeError(f"Could not parse time from output of {' '.join(cmd)}")
 
 
-def benchmark(tests, static_bin, dynamic_bin, runs=100):
-    """
-    For each test scenario in tests, runs static and dynamic binaries 'runs' times,
-    computes average elapsed time, and prints a Markdown table.
-    """
-    header = ["Scenario", "Static avg (ms)", "Dynamic avg (ms)", "Δ %"]
-    print("| " + " | ".join(header) + " |")
-    print("|" + "---|" * (len(header) - 1) + "---|")
+def benchmark(tests, static_bin, dynamic_bin, runs):
+    # Table headers
+    headers = [
+        "Scenario",
+        "Static avg (ms)",
+        "Dynamic avg (ms)",
+        "Δ time %",
+    ]
+    # Determine padding widths
+    max_label_len = max(len(headers[0]), *(len(t["label"]) for t in tests))
+    static_col_w = max(len(headers[1]), 14)
+    dynamic_col_w = max(len(headers[2]), 14)
+    delta_col_w = max(len(headers[3]), 9)
 
-    for test in tests:
-        label = test["label"]
-        max_err = test["max"]
-        batch = test["batch"]
+    # Print header row with padded columns
+    header_fmt = (
+        f"| {{:<{max_label_len}}} |"
+        f" {{:>{static_col_w}}} |"
+        f" {{:>{dynamic_col_w}}} |"
+        f" {{:>{delta_col_w}}} |"
+    )
+    print(header_fmt.format(*headers))
 
-        static_cmd = [static_bin, f"--max={max_err}", f"--batch={batch}"]
-        dynamic_cmd = [dynamic_bin, f"--max={max_err}", f"--batch={batch}"]
+    # Print separator row
+    sep = (
+        f"| {'-' * max_label_len} |"
+        f" {'-' * static_col_w} |"
+        f" {'-' * dynamic_col_w} |"
+        f" {'-' * delta_col_w} |"
+    )
+    print(sep)
 
-        print(f"# Running {label} (static) {runs} times...")
-        static_times = [run_and_parse(static_cmd) for _ in range(runs)]
-        avg_static = statistics.mean(static_times)
+    # Print each test row
+    row_fmt = (
+        f"| {{:<{max_label_len}}} |"
+        f" {{:>{static_col_w}.2f}} |"
+        f" {{:>{dynamic_col_w}.2f}} |"
+        f" {{:>{delta_col_w}.1f}}% |"
+    )
+    for t in tests:
+        label = t["label"]
+        args = [f"--max={t['max']}", f"--batch={t['batch']}"]
 
-        print(f"# Running {label} (dynamic) {runs} times...")
-        dynamic_times = [run_and_parse(dynamic_cmd) for _ in range(runs)]
-        avg_dynamic = statistics.mean(dynamic_times)
+        # Static measurements
+        s_times = [run_and_time([static_bin] + args) for _ in range(runs)]
+        avg_s = statistics.mean(s_times)
 
-        delta = (avg_dynamic - avg_static) / avg_static * 100
+        # Dynamic measurements
+        d_times = [run_and_time([dynamic_bin] + args) for _ in range(runs)]
+        avg_d = statistics.mean(d_times)
 
-        print(f"| {label} | {avg_static:.2f} | {avg_dynamic:.2f} | {delta:.1f}% |")
+        # Percent delta
+        delta = (avg_d - avg_s) / avg_s * 100
+
+        # Print padded row
+        print(row_fmt.format(label, avg_s, avg_d, delta))
 
 
 if __name__ == "__main__":
-    # Path to your compiled binaries
-    STATIC_BIN = "./builddir/test_static"
-    DYNAMIC_BIN = "./builddir/test_dynamic"
+    p = argparse.ArgumentParser(
+        description="Error-Allocation Benchmark (single-threaded, padded table)"
+    )
+    p.add_argument(
+        "--static", default="./build/test_static", help="Path to static-buffer binary"
+    )
+    p.add_argument(
+        "--dynamic",
+        default="./build/test_dynamic",
+        help="Path to dynamic-fields binary",
+    )
+    p.add_argument("--runs", type=int, default=100, help="Repetitions per scenario")
+    args = p.parse_args()
 
-    # Define your test scenarios
+    # Single-thread burst tests
     tests = [
-        {"label": "1 / 1 thr", "max": 10000, "batch": 1},
-        {"label": "4 / 1 thr", "max": 10000, "batch": 4},
-        {"label": "8 / 1 thr", "max": 10000, "batch": 8},
-        {"label": "1 / 2 thr", "max": 20000, "batch": 1},
-        {"label": "1 / 4 thr", "max": 40000, "batch": 1},
-        {"label": "1 / 8 thr", "max": 80000, "batch": 1},
+        {"label": "Cold-start / immediate free", "max": 10000, "batch": 1},
+        {"label": "Tiny burst (live=4)", "max": 10000, "batch": 4},
+        {"label": "Occasional cascade (live=8)", "max": 10000, "batch": 8},
     ]
 
-    # Number of repetitions per measurement
-    RUNS = 100
-
-    benchmark(tests, STATIC_BIN, DYNAMIC_BIN, RUNS)
+    benchmark(tests, args.static, args.dynamic, args.runs)
