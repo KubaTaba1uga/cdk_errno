@@ -1,0 +1,95 @@
+#ifndef C_MINILIB_COMMON_H
+#define C_MINILIB_COMMON_H
+
+#define _POSIX_C_SOURCE 200809L
+
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#ifdef CME_ENABLE_BACKTRACE
+#include <dlfcn.h>
+#include <execinfo.h>
+#endif
+
+#define CME_DUMP_COMMON_FIELDS(f, e)                                           \
+  do {                                                                         \
+    if ((f) && (e)) {                                                          \
+      fprintf((f),                                                             \
+              "====== ERROR DUMP ======\n"                                     \
+              "Error code: %d\n"                                               \
+              "Error message: %s\n"                                            \
+              "Src file: %s\n"                                                 \
+              "Src line: %d\n"                                                 \
+              "Src func: %s\n",                                                \
+              (e)->code, (e)->msg ? (e)->msg : "NULL",                         \
+              (e)->source_file ? (e)->source_file : "NULL", (e)->source_line,  \
+              (e)->source_func ? (e)->source_func : "NULL");                   \
+    }                                                                          \
+  } while (0)
+
+// Timestamp helper
+static inline long long cme_now_ns(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+// Format message into preallocated buffer (va_list variant)
+static inline int cme_format_message_va(char *buf, size_t buflen,
+                                        const char *fmt, va_list ap) {
+  if (!buf || buflen == 0)
+    return EINVAL;
+
+  if (!fmt) {
+    strncpy(buf, "No message", buflen - 1);
+    buf[buflen - 1] = '\0';
+    return 0;
+  }
+
+  vsnprintf(buf, buflen, fmt, ap);
+  return 0;
+}
+
+#ifdef CME_ENABLE_BACKTRACE
+// Fill backtrace into preallocated array
+static inline int cme_capture_backtrace(void **out, int max) {
+  void *frames[max + 2];
+  int total = backtrace(frames, max + 2);
+  if (total <= 2) {
+    return 0;
+  }
+
+  int n = total - 2;
+  if (n > max)
+    n = max;
+
+  memcpy(out, frames + 2, n * sizeof(void *));
+
+  return n;
+}
+
+// Dump backtrace to file
+static inline void cme_dump_backtrace(FILE *f, int count, void **addrs) {
+
+  if (!f || count <= 0 || !addrs)
+    return;
+
+  fprintf(f, "------------------------\n");
+  for (int i = 0; i < count; ++i) {
+    Dl_info info;
+    void *addr = addrs[i];
+    if (dladdr(addr, &info) && info.dli_sname) {
+      unsigned long off = (char *)addr - (char *)info.dli_saddr;
+      fprintf(f, "%s+0x%lx [%p]\n", info.dli_sname, off, addr);
+    } else {
+      fprintf(f, "?? [%p]\n", addr);
+    }
+  }
+}
+#endif
+
+#endif // C_MINILIB_COMMON_H
