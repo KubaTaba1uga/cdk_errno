@@ -4,18 +4,13 @@
 #include <string.h>
 #include <time.h>
 
+#include "common.h"
 #include "dynamic.h"
 
 #define USAGE_MSG                                                              \
   "Usage: %s --max=N --batch=B\n"                                              \
   "  --max     Total number of errors to allocate\n"                           \
   "  --batch   Free every B errors (for immediate free, use --batch==--max)\n"
-
-static inline long long now_ns(void) {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
-}
 
 int main(int argc, char **argv) {
   int max = 0, batch = 0;
@@ -32,11 +27,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  long long start_ns = now_ns();
+  long long start_ns = cme_now_ns();
 
   for (int i = 0; i < max; i += batch) {
     int current_batch = (i + batch <= max) ? batch : (max - i);
-    cme_dynamic_error_t *errors = malloc(sizeof(*errors) * current_batch);
+    cme_dynamic_error_t *errors = malloc(sizeof(void *) * current_batch);
     if (!errors) {
       perror("malloc failed");
       return 1;
@@ -50,7 +45,7 @@ int main(int argc, char **argv) {
     free(errors);
   }
 
-  long long end_ns = now_ns();
+  long long end_ns = cme_now_ns();
   double elapsed_ms = (end_ns - start_ns) / 1e6;
 
   printf("Dynamic error allocation test complete:\n");
