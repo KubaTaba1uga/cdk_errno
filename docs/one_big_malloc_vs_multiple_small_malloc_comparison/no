@@ -1,0 +1,6 @@
+Running dynamic error allocation benchmark (frameptr)...
+Dynamic error allocation benchmark complete:
+  Total errors: 1
+  Batch size: 1
+  Bytes per batch: 48 bytes
+  Time elapsed: 0.2802 ms
