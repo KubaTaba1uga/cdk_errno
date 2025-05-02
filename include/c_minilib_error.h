@@ -41,9 +41,52 @@ int cme_init(void);
 
 void cme_destroy(void);
 
+#define CME_RING_SIZE 64
+
 // Create error
-cme_error_t cme_error_create(int code, char *source_file, char *source_func,
-                             int source_line, const char *msg);
+// expose the one true ring
+extern struct cme_Error cme_ringbuf[CME_RING_SIZE];
+extern uint32_t cme_ringbuf_i;
+
+#define CME_RING_MASK (CME_RING_SIZE - 1)
+
+// always-inline indexer
+static inline __attribute__((always_inline)) uint32_t next_idx(void) {
+  uint32_t i = cme_ringbuf_i;
+  cme_ringbuf_i = (i + 1) & CME_RING_MASK;
+  return i;
+}
+
+// always-inline create
+static inline __attribute__((always_inline)) cme_error_t
+cme_error_create(int code, const char *file, const char *func, int line,
+                 const char *msg) {
+  cme_error_t e = &cme_ringbuf[next_idx()];
+  e->code = (uint8_t)code;
+  e->msg = msg;
+  e->frames_length = 1;
+  e->frames[0] = (struct cme_Frame){file, func, (uint32_t)line};
+  return e;
+}
+
+// always-inline push
+static inline __attribute__((always_inline)) cme_error_t
+cme_error_push_symbol(cme_error_t err, const char *file, const char *func,
+                      int line) {
+#ifdef CME_ENABLE_BACKTRACE
+  if (err->frames_length < CME_STACK_MAX)
+    err->frames[err->frames_length++] =
+        (struct cme_Frame){file, func, (uint32_t)line};
+#else
+  (void)file;
+  (void)func;
+  (void)line;
+#endif
+  return err;
+}
+/* cme_error_t cme_error_create(int code, char *source_file, char *source_func,
+ */
+/*                              int source_line, const char *msg); */
 cme_error_t cme_error_create_fmt(int code, char *source_file, char *source_func,
                                  int source_line, const char *fmt, ...);
 
@@ -67,8 +110,8 @@ int cme_error_dump_to_file(cme_error_t err, char *file_path);
 int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer);
 
 // Add symbol to error stack
-cme_error_t cme_error_push_symbol(cme_error_t err, const char *file,
-                                  const char *func, int line);
+/* cme_error_t cme_error_push_symbol(cme_error_t err, const char *file, */
+/*                                   const char *func, int line); */
 // Handy macro
 #define cme_return(ERR)                                                        \
   cme_error_push_symbol((ERR), __FILE__, __func__, __LINE__)

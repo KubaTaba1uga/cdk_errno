@@ -15,23 +15,27 @@
 #include "c_minilib_error.h"
 #include "common.h"
 
-#define CME_RING_SIZE 128
+struct cme_Error cme_ringbuf[CME_RING_SIZE];
+uint32_t cme_ringbuf_i = 0;
 
-static struct cme_Error *cme_ringbuf = NULL;
-static uint32_t cme_ringbuf_i = 0;
-static inline uint32_t next_idx(void) {
-  return cme_ringbuf_i++ & (CME_RING_SIZE - 1);
-}
+/* static struct cme_Error *cme_ringbuf = NULL; */
+/* static uint32_t cme_ringbuf_i = 0; */
+
+/* static inline uint32_t next_idx(void) { */
+/*   uint32_t i = cme_ringbuf_i; */
+/*   cme_ringbuf_i = (i + 1) & (CME_RING_SIZE - 1); */
+/*   return i; */
+/* } */
 
 int cme_init(void) {
-  if (cme_ringbuf) {
-    return 0;
-  }
+  /* if (cme_ringbuf) { */
+  /*   return 0; */
+  /* } */
 
-  cme_ringbuf = malloc(CME_RING_SIZE * sizeof(struct cme_Error));
-  if (!cme_ringbuf) {
-    return ENOMEM;
-  }
+  /* cme_ringbuf = malloc(CME_RING_SIZE * sizeof(struct cme_Error)); */
+  /* if (!cme_ringbuf) { */
+  /*   return ENOMEM; */
+  /* } */
 
   cme_ringbuf_i = 0;
 
@@ -39,26 +43,29 @@ int cme_init(void) {
 }
 
 void cme_destroy(void) {
-  if (!cme_ringbuf) {
-    return;
-  }
+  /* if (!cme_ringbuf) { */
+  /*   return; */
+  /* } */
 
-  free(cme_ringbuf);
-  cme_ringbuf = NULL;
+  /* free(cme_ringbuf); */
+  /* cme_ringbuf = NULL; */
   cme_ringbuf_i = 0;
 }
 
-cme_error_t cme_error_create(int code, char *source_file, char *source_func,
-                             int source_line, const char *msg) {
+/* cme_error_t cme_error_create(int code, char *source_file, char *source_func,
+ */
+/*                              int source_line, const char *msg) { */
 
-  cme_error_t err = &cme_ringbuf[next_idx()];
-  err->code = code;
-  err->msg = msg;
-  err->frames_length = 1;
-  err->frames[0] = (struct cme_Frame){
-      .file = source_file, .func = source_func, .line = source_line};
-  return err;
-}
+/*   cme_error_t err = &cme_ringbuf[next_idx()]; */
+/*   err->code = code; */
+/*   err->msg = msg; */
+/*   err->frames_length = 1; */
+/*   err->frames[0] = (struct cme_Frame){ */
+/*       .file = source_file, .func = source_func, .line = source_line}; */
+
+/*   return err; */
+/* } */
+
 cme_error_t cme_error_create_fmt(int code, char *source_file, char *source_func,
                                  int source_line, const char *fmt, ...) {
   cme_error_t err = &cme_ringbuf[next_idx()];
@@ -83,11 +90,11 @@ cme_error_t cme_error_create_fmt(int code, char *source_file, char *source_func,
 }
 
 void cme_error_destroy(cme_error_t err) {
-  if (!err) {
-    return;
-  }
+  /* if (!err) { */
+  /*   return; */
+  /* } */
 
-  memset(err, 0, sizeof(struct cme_Error));
+  /* memset(err, 0, sizeof(struct cme_Error)); */
 }
 
 int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer) {
@@ -144,16 +151,17 @@ int cme_error_dump_to_file(cme_error_t err, char *path) {
   return 0;
 }
 
-cme_error_t cme_error_push_symbol(cme_error_t err, const char *file,
-                                  const char *func, int line) {
-#ifdef CME_ENABLE_BACKTRACE
-  if (err->frames_length < CME_STACK_MAX) {
-    err->frames[err->frames_length++] = (struct cme_Frame){file, func, line};
-  }
-#else
-  (void)file;
-  (void)func;
-  (void)line;
-#endif
-  return err;
-}
+/* cme_error_t cme_error_push_symbol(cme_error_t err, const char *file, */
+/*                                   const char *func, int line) { */
+/* #ifdef CME_ENABLE_BACKTRACE */
+/*   if (err->frames_length < CME_STACK_MAX) { */
+/*     err->frames[err->frames_length++] = (struct cme_Frame){file, func, line};
+ */
+/*   } */
+/* #else */
+/*   (void)file; */
+/*   (void)func; */
+/*   (void)line; */
+/* #endif */
+/*   return err; */
+/* } */
