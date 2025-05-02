@@ -9,9 +9,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-// We are staticly restricting fields to create only one memory allocation for
-//  whole error. Mallocs are pretty expensive and errors can be created and
-//  destroyed very frequently.
 #ifdef CME_ENABLE_BACKTRACE
 #define CME_STACK_MAX 16
 #else
@@ -20,6 +17,9 @@
 
 #define CME_STR_MAX 255
 
+// Resolving symbols is quite cumbersome and require a lot of compilation flags
+// like -fno-omit-pointer, -fno-pie etc. Resolving symbols on compilation
+//  step simplify process much.
 struct cme_StackSymbol {
   const char *source_file;
   const char *source_func;
@@ -30,6 +30,9 @@ struct __attribute__((aligned(8))) cme_Error {
   uint32_t code;
   char msg[CME_STR_MAX];
   uint32_t stack_length;
+  // We are staticly restricting fields to create only one memory allocation for
+  //  whole error. Mallocs are pretty expensive and errors can be created and
+  //  destroyed very frequently.
   struct cme_StackSymbol stack_symbols[CME_STACK_MAX];
 };
 

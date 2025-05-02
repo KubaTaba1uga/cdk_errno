@@ -6,7 +6,6 @@
 #include <string.h>
 #include <unistd.h>
 
-inline static char *create_temp_file_path(void) __attribute__((unused));
 inline static char *create_temp_file_path(void) {
   char *template = strdup("/tmp/cme_error_dump_XXXXXX");
   if (!template) {

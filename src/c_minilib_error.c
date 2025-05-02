@@ -80,8 +80,9 @@ int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer) {
 
   written =
       cme_sprintf(buffer + offset, n - offset, "------------------------\n");
-  if (written < 0)
+  if (written < 0) {
     return ENOBUFS;
+  }
   offset += (size_t)written;
 
   for (uint32_t i = 0; i < err->stack_length; ++i) {
@@ -90,8 +91,9 @@ int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer) {
                           sym->source_func ? sym->source_func : "??",
                           sym->source_file ? sym->source_file : "??",
                           sym->source_line);
-    if (written < 0)
+    if (written < 0) {
       return ENOBUFS;
+    }
     offset += (size_t)written;
   }
 
@@ -120,10 +122,12 @@ cme_error_t cme_error_push_symbol(cme_error_t err, const char *file,
   (void)line;
   return err;
 #else
-  if (!err)
+  if (!err) {
     return err;
-  if (err->stack_length >= CME_STACK_MAX)
+  }
+  if (err->stack_length >= CME_STACK_MAX) {
     return err;
+  }
 
   struct cme_StackSymbol *f = &err->stack_symbols[err->stack_length++];
   f->source_file = file;
