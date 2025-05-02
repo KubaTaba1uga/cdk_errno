@@ -137,7 +137,7 @@ def format(c):
 
         for path in glob.glob(pattern, recursive=True):
             if os.path.isfile(path):
-                _run_command(c, f"{C_FORMATTER} {path}")
+                _run_command(c, f"{C_FORMATTER} -i {path}")
                 _pr_info(f"{path} formated")
 
     _pr_info("Formating done")
