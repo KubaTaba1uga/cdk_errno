@@ -14,15 +14,37 @@
 
 ```c
 #include "c_minilib_error.h"
+#include <stdio.h>
+
+// Level 3: Generates the error
+struct cme_Error *level3(void) {
+    return cme_errorf(101, "Level 3 failure: invalid state");
+}
+
+// Level 2: Wraps level 3
+struct cme_Error *level2(void) {
+    return cme_return(level3());
+}
+
+// Level 1: Wraps level 2
+struct cme_Error *level1(void) {
+    return cme_return(level2());
+}
 
 int main(void) {
-    struct cme_Error *err = cme_errorf(1, "Something failed: %s", "reason");
-
+    struct cme_Error *err = level1();
     if (err) {
-        fprintf(stderr, "[%s:%d] %s\n", err->source_file, err->source_line, err->msg);
+        // Dump to file
+        cme_error_dump_to_file(err, "error_dump.txt");
+
+        // Dump to string buffer
+        char buffer[1024];
+        cme_error_dump_to_str(err, sizeof(buffer), buffer);
+        fprintf(stderr, "%s", buffer);
+
+        // Cleanup
         cme_error_destroy(err);
     }
-
     return 0;
 }
 ```
@@ -96,14 +118,3 @@ echo 2 | sudo tee /proc/sys/kernel/randomize_va_space
 
 MIT License. See [LICENSE](LICENSE) for full text.
 
-
-
-## Tracebacks checklist
-
-To be sure that traces are decodable to lines perform these steps.
-
-1. Ensure you have -no-pie built executable:
-```
-readelf -h build/test_static_backtrace | grep Type:
-# now you should see ET_EXEC
-```
