@@ -46,7 +46,7 @@ int cme_static_error_dump(cme_static_error_t err, const char *path) {
   CME_DUMP_COMMON_FIELDS(file, err);
 
 #ifdef CME_ENABLE_BACKTRACE
-  cme_dump_backtrace(file, err->stack_length, err->stack_symbols);
+  cme_dump_backtrace(file, err->stack_length, err->stack);
 #endif
 
   fclose(file);

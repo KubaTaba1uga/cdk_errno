@@ -11,7 +11,7 @@ static struct cme_DynamicError generic_error = {
     .source_func = NULL,
     .source_line = 0,
     .stack_length = 0,
-    .stack_symbols = NULL,
+    .stack = NULL,
 };
 
 #define CREATE_GENERIC_ERROR(code_, msg_)                                      \
@@ -36,7 +36,10 @@ cme_dynamic_error_t cme_dynamic_error_create(int code, const char *file,
   err->source_file = strdup(file);
   err->source_func = strdup(func);
   err->stack_length = 0;
-  err->stack_symbols = NULL;
+  err->stack = NULL;
+#ifdef CME_ENABLE_BACKTRACE
+  err->stack = malloc(CME_STACK_MAX * sizeof(struct cme_StackSymbol));
+#endif
 
   if (fmt) {
     va_list ap;
@@ -74,7 +77,7 @@ void cme_dynamic_error_destroy(cme_dynamic_error_t err) {
   free(err->source_file);
   free(err->source_func);
 #ifdef CME_ENABLE_BACKTRACE
-  free(err->stack_symbols);
+  free(err->stack);
 #endif
   free(err);
 }
@@ -90,7 +93,7 @@ int cme_dynamic_error_dump(cme_dynamic_error_t err, const char *path) {
   CME_DUMP_COMMON_FIELDS(f, err);
 
 #ifdef CME_ENABLE_BACKTRACE
-  cme_dump_backtrace(f, err->stack_length, err->stack_symbols);
+  cme_dump_backtrace(f, err->stack_length, err->stack);
 #endif
 
   fclose(f);
