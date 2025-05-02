@@ -19,4 +19,16 @@ executable(
   link_args: ['-no-pie'],  # this is required for backtraces translation  
 )
 
+executable(
+  'test_single_method',
+  ['test_single.c', 'method_single.c'],
+  include_directories: '.',
+)
 
+executable(
+  'test_single_method_with_backtrace',
+  ['test_single.c', 'method_single.c'],
+  include_directories: '.',
+  c_args: ['-DCME_ENABLE_BACKTRACE'],
+  link_args: ['-no-pie'],  # this is required for backtraces translation  
+)

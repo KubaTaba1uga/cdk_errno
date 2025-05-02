@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "common.h"
-#include "static.h"
+#include "method_single.h"
 
 cme_static_error_t cme_static_error_create(int code, const char *file,
                                            const char *func, int line,

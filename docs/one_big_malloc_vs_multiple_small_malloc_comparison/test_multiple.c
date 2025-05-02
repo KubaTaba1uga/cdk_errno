@@ -68,14 +68,17 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  const int field_width = 18;
+
   printf("Running dynamic error allocation benchmark (frameptr)...\n");
   double time_fp = run_benchmark(test_nested_error, max, batch);
   printf("Dynamic error allocation benchmark complete:\n");
-  printf("  Total errors: %d\n", max);
-  printf("  Batch size: %d\n", batch);
-  printf("  Bytes per batch: %zu bytes\n",
+  printf("%*s: %d\n", field_width, "Total errors", max);
+  printf("%*s: %d\n", field_width, "Batch size", batch);
+  printf("%*s: %zu bytes\n", field_width, "Bytes per batch",
          sizeof(struct cme_DynamicError) * batch);
-  printf("  Time elapsed: %.4f ms\n", time_fp);
+  printf("%*s: %.4f ms\n", field_width, "Time elapsed", time_fp);
+  printf("%*s: %.6f ms\n", field_width, "Avg time per error", time_fp / max);
 
   return 0;
 }

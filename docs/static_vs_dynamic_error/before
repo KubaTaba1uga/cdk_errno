@@ -1,8 +1,0 @@
-
-✦ ❯ python3 benchmark.py  --static ./build/test_static_backtrace --dynamic ./build/test_dynamic_backtrace
-| Scenario                    | Static avg (ms) | Dynamic avg (ms) |  Δ time % |
-| --------------------------- | --------------- | ---------------- | --------- |
-| Cold-start / immediate free |           31.98 |            36.28 |      13.5% |
-| Tiny burst (live=4)         |           32.09 |            36.97 |      15.2% |
-| Occasional cascade (live=8) |           32.54 |            37.20 |      14.3% |
-
