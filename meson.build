@@ -17,17 +17,7 @@ cc = meson.get_compiler('c')
 # *    Library
 # ******************************************************************************
 if get_option('backtrace')
-  # Check that parent compiled with -fno-omit-frame-pointer
-  if not cc.has_argument('-fno-omit-frame-pointer')
-    error('This library requires -fno-omit-frame-pointer when backtrace is enabled')
-  endif
-
-  # Check that PIE is disabled
-  if not cc.has_link_argument('-no-pie')
-    error('This library requires -no-pie when backtrace is enabled')
-  endif
-  
-  add_project_arguments(['-DCME_ENABLE_BACKTRACE', '-fno-omit-frame-pointer'], language: 'c')
+  add_project_arguments(['-DCME_ENABLE_BACKTRACE', '-fno-pie', '-fno-omit-frame-pointer'], language: 'c')
   add_project_link_arguments('-no-pie', language: 'c')
 endif
 
