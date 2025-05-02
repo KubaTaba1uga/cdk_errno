@@ -14,57 +14,51 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef CME_ENABLE_BACKTRACE
-#define CME_STACK_MAX 16
-#else
-#define CME_STACK_MAX 1
-#endif
-
 #define CME_STR_MAX 255
 
 // Resolving symbols is quite cumbersome and require a lot of compilation flags
 // like -fno-omit-pointer, -fno-pie etc. Resolving symbols on compilation
 //  step simplify process much.
-struct cme_StackSymbol {
-  const char *source_file;
-  const char *source_func;
-  uint32_t source_line;
+
+#define CME_STACK_MAX 8 /* 5 is enough, 8 keeps it 64-byte aligned */
+
+struct cme_Frame {
+  const char *file;
+  const char *func;
+  uint32_t line;
 };
 
-struct __attribute__((aligned(8))) cme_Error {
-  uint32_t code;
-  char msg[CME_STR_MAX];
-  uint32_t stack_length;
-  // We are staticly restricting fields to create only one memory allocation for
-  //  whole error. Mallocs are pretty expensive and errors can be created and
-  //  destroyed very frequently.
-  struct cme_StackSymbol stack_symbols[CME_STACK_MAX];
+struct __attribute__((aligned(64))) cme_Error {
+  uint8_t code;
+  const char *msg;
+  uint8_t frames_length;
+  struct cme_Frame frames[CME_STACK_MAX];
 };
 
 typedef struct cme_Error *cme_error_t;
 
-struct cme_Settings {
-  int32_t ring_size;     // by default: 32
-  bool is_ring_growable; // by default: false
-};
-
 int cme_init(void);
-
-void cme_configure(struct cme_Settings *settings);
 
 void cme_destroy(void);
 
 // Create error
 cme_error_t cme_error_create(int code, char *source_file, char *source_func,
-                             int source_line, char *fmt, ...);
+                             int source_line, const char *msg);
+cme_error_t cme_error_create_fmt(int code, char *source_file, char *source_func,
+                                 int source_line, const char *fmt, ...);
 
 // Destroy error
 void cme_error_destroy(cme_error_t err);
 
-// Handy macro
+// Handy macros
 #define cme_errorf(code, fmt, ...)                                             \
+  cme_error_create_fmt((code), __FILE__, (char *)__func__, __LINE__,           \
+                       (char *)(fmt), ##__VA_ARGS__)
+
+// Handy macro
+#define cme_error(code, msg)                                                   \
   cme_error_create((code), __FILE__, (char *)__func__, __LINE__,               \
-                   (char *)(fmt), ##__VA_ARGS__)
+                   (const char *)(msg))
 
 // Dump error to file
 int cme_error_dump_to_file(cme_error_t err, char *file_path);

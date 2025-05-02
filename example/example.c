@@ -6,7 +6,7 @@
 typedef struct cme_Error *cme_error_t;
 
 cme_error_t error_function(void) {
-  return cme_errorf(1, "Example error occurred with value: %d", 42);
+  return cme_error(1, "Example error occurred with value: 42");
 }
 
 cme_error_t good_function(void) { return NULL; }
@@ -26,9 +26,6 @@ cme_error_t demo_error_logic(void) {
 }
 
 void app() {
-  cme_configure(
-      &(struct cme_Settings){.is_ring_growable = false, .ring_size = 16});
-
   cme_init();
 
   cme_error_t err;
