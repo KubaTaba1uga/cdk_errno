@@ -36,7 +36,6 @@ void app() {
     char err_buffer[4096];
     cme_error_dump_to_str(err, sizeof(err_buffer), err_buffer);
     printf("%s", err_buffer);
-    cme_error_destroy(err);
   }
 
   cme_destroy();

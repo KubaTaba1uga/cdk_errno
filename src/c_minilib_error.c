@@ -15,27 +15,18 @@
 #include "c_minilib_error.h"
 #include "common.h"
 
-struct cme_Error cme_ringbuf[CME_RING_SIZE];
+struct cme_Error *cme_ringbuf = NULL;
 uint32_t cme_ringbuf_i = 0;
 
-/* static struct cme_Error *cme_ringbuf = NULL; */
-/* static uint32_t cme_ringbuf_i = 0; */
-
-/* static inline uint32_t next_idx(void) { */
-/*   uint32_t i = cme_ringbuf_i; */
-/*   cme_ringbuf_i = (i + 1) & (CME_RING_SIZE - 1); */
-/*   return i; */
-/* } */
-
 int cme_init(void) {
-  /* if (cme_ringbuf) { */
-  /*   return 0; */
-  /* } */
+  if (cme_ringbuf) {
+    return 0;
+  }
 
-  /* cme_ringbuf = malloc(CME_RING_SIZE * sizeof(struct cme_Error)); */
-  /* if (!cme_ringbuf) { */
-  /*   return ENOMEM; */
-  /* } */
+  cme_ringbuf = malloc(CME_RING_SIZE * sizeof(struct cme_Error));
+  if (!cme_ringbuf) {
+    return ENOMEM;
+  }
 
   cme_ringbuf_i = 0;
 
@@ -43,59 +34,16 @@ int cme_init(void) {
 }
 
 void cme_destroy(void) {
-  /* if (!cme_ringbuf) { */
-  /*   return; */
-  /* } */
+  if (!cme_ringbuf) {
+    return;
+  }
 
-  /* free(cme_ringbuf); */
-  /* cme_ringbuf = NULL; */
+  free(cme_ringbuf);
+  cme_ringbuf = NULL;
   cme_ringbuf_i = 0;
 }
 
-/* cme_error_t cme_error_create(int code, char *source_file, char *source_func,
- */
-/*                              int source_line, const char *msg) { */
-
-/*   cme_error_t err = &cme_ringbuf[next_idx()]; */
-/*   err->code = code; */
-/*   err->msg = msg; */
-/*   err->frames_length = 1; */
-/*   err->frames[0] = (struct cme_Frame){ */
-/*       .file = source_file, .func = source_func, .line = source_line}; */
-
-/*   return err; */
-/* } */
-
-cme_error_t cme_error_create_fmt(int code, char *source_file, char *source_func,
-                                 int source_line, const char *fmt, ...) {
-  cme_error_t err = &cme_ringbuf[next_idx()];
-
-  /* err->code = code; */
-  /* err->trace_l.source_file = source_file; */
-  /* err->trace_l.source_func = source_func; */
-  /* err->trace_l.source_line = source_line; */
-  /* err->trace_l.next = NULL; */
-
-  // To do create str buffer for messages
-  /* if (fmt) { */
-  /*   va_list args; */
-  /*   va_start(args, fmt); */
-  /*   vsnprintf(err->msg, CME_STR_MAX, fmt, args); */
-  /*   va_end(args); */
-  /* } else { */
-  /*   snprintf(err->msg, CME_STR_MAX, "No message"); */
-  /* } */
-
-  return err;
-}
-
-void cme_error_destroy(cme_error_t err) {
-  /* if (!err) { */
-  /*   return; */
-  /* } */
-
-  /* memset(err, 0, sizeof(struct cme_Error)); */
-}
+void cme_error_destroy(cme_error_t err) {}
 
 int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer) {
   if (!err || !buffer || n == 0) {
@@ -150,18 +98,3 @@ int cme_error_dump_to_file(cme_error_t err, char *path) {
 
   return 0;
 }
-
-/* cme_error_t cme_error_push_symbol(cme_error_t err, const char *file, */
-/*                                   const char *func, int line) { */
-/* #ifdef CME_ENABLE_BACKTRACE */
-/*   if (err->frames_length < CME_STACK_MAX) { */
-/*     err->frames[err->frames_length++] = (struct cme_Frame){file, func, line};
- */
-/*   } */
-/* #else */
-/*   (void)file; */
-/*   (void)func; */
-/*   (void)line; */
-/* #endif */
-/*   return err; */
-/* } */
