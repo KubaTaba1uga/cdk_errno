@@ -17,11 +17,12 @@
 static struct cme_Error generic_error = {0};
 
 #define CREATE_GENERIC_ERROR(status_code, err_msg)                             \
-  generic_error.stack_length = 0;                                              \
-  generic_error.code = (status_code);                                          \
-  generic_error.source_line = __LINE__;                                        \
   snprintf(generic_error.msg, CME_STR_MAX, "%s", (err_msg));                   \
-  snprintf(generic_error.source_func, CME_STR_MAX, "%s", __func__);
+  generic_error.code = (status_code);                                          \
+  generic_error.stack_length = 1;                                              \
+  generic_error.stack_symbols[0].source_file = __FILE__;                       \
+  generic_error.stack_symbols[0].source_func = __func__;                       \
+  generic_error.stack_symbols[0].source_line = __LINE__;
 
 cme_error_t cme_error_create(int code, char *source_file, char *source_func,
                              int source_line, char *fmt, ...) {
@@ -32,17 +33,11 @@ cme_error_t cme_error_create(int code, char *source_file, char *source_func,
     return &generic_error;
   }
 
-  err->stack_length = 0;
   err->code = code;
-  err->source_line = source_line;
-
-  if (source_file) {
-    snprintf(err->source_file, CME_STR_MAX, "%s", source_file);
-  }
-
-  if (source_func) {
-    snprintf(err->source_func, CME_STR_MAX, "%s", source_func);
-  }
+  err->stack_length = 1;
+  err->stack_symbols[0].source_func = source_func;
+  err->stack_symbols[0].source_file = source_file;
+  err->stack_symbols[0].source_line = source_line;
 
   if (fmt) {
     va_list args;
@@ -72,40 +67,33 @@ int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer) {
   size_t offset = 0;
   int written;
 
-  /* 1) Common fields */
   written = cme_sprintf(buffer + offset, n - offset,
                         "====== ERROR DUMP ======\n"
                         "Error code: %d\n"
-                        "Error message: %s\n"
-                        "Src file: %s\n"
-                        "Src line: %d\n"
-                        "Src func: %s\n",
-                        err->code, err->msg, err->source_file, err->source_line,
-                        err->source_func);
+                        "Error message: %s\n",
+                        err->code, err->msg);
   if (written < 0) {
     return ENOBUFS;
   }
+
   offset += (size_t)written;
 
-#ifdef CME_ENABLE_BACKTRACE
-  if (err->stack_length > 0) {
-    written =
-        cme_sprintf(buffer + offset, n - offset, "------------------------\n");
-    if (written < 0) {
-      return ENOBUFS;
-    }
-    offset += (size_t)written;
+  written =
+      cme_sprintf(buffer + offset, n - offset, "------------------------\n");
+  if (written < 0)
+    return ENOBUFS;
+  offset += (size_t)written;
 
-    for (int i = 0; i < err->stack_length; ++i) {
-      written = cme_sprintf(buffer + offset, n - offset, "[%p]\n",
-                            err->stack_symbols[i]);
-      if (written < 0) {
-        return ENOBUFS;
-      }
-      offset += (size_t)written;
-    }
+  for (uint32_t i = 0; i < err->stack_length; ++i) {
+    const struct cme_StackSymbol *sym = &err->stack_symbols[i];
+    written = cme_sprintf(buffer + offset, n - offset, "%u:%s:%s:%u\n", i,
+                          sym->source_func ? sym->source_func : "??",
+                          sym->source_file ? sym->source_file : "??",
+                          sym->source_line);
+    if (written < 0)
+      return ENOBUFS;
+    offset += (size_t)written;
   }
-#endif
 
   return 0;
 }
@@ -124,19 +112,23 @@ int cme_error_dump_to_file(cme_error_t err, char *path) {
   return 0;
 }
 
-cme_error_t cme_return(cme_error_t err) {
+cme_error_t cme_error_push_symbol(cme_error_t err, const char *file,
+                                  const char *func, int line) {
 #ifndef CME_ENABLE_BACKTRACE
+  (void)file;
+  (void)func;
+  (void)line;
   return err;
 #else
-  if (!err) {
+  if (!err)
     return err;
-  }
+  if (err->stack_length >= CME_STACK_MAX)
+    return err;
 
-  if (err->stack_length < CME_STACK_MAX) {
-    err->stack_symbols[err->stack_length++] =
-        __builtin_extract_return_addr(__builtin_return_address(0));
-  }
-
+  struct cme_StackSymbol *f = &err->stack_symbols[err->stack_length++];
+  f->source_file = file;
+  f->source_func = func;
+  f->source_line = line;
   return err;
 #endif
-};
+}
