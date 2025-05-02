@@ -39,7 +39,6 @@ int main(void) {
   for (int i = 0; i < iters; i++)
     err_l5();
   clock_gettime(CLOCK_MONOTONIC, &t1);
-  cme_destroy();
   ns_err = (t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec);
 
   // measure formatted error-trace
@@ -48,7 +47,6 @@ int main(void) {
   for (int i = 0; i < iters; i++)
     errf_l5();
   clock_gettime(CLOCK_MONOTONIC, &t1);
-  cme_destroy();
   ns_fmt = (t1.tv_sec - t0.tv_sec) * 1e9 + (t1.tv_nsec - t0.tv_nsec);
 
   // measure plain int return
@@ -63,11 +61,27 @@ int main(void) {
   printf("5-lvl int   avg:     %.1f ns\n", ns_int / iters);
 
   // sample dump
-  cme_init();
   cme_error_t e = errf_l5();
-  if (e && cme_error_dump_to_str(e, 1024, (char[1024]){0}) == 0) {
-    printf("\n=== Sample fmt Trace ===\n%s", (char[1024]){0});
+  if (e) {
+    char buf[1024];
+    if (cme_error_dump_to_str(e, sizeof(buf), buf) == 0) {
+      printf("\n=== Sample Formatted Error Trace ===\n%s", buf);
+    } else {
+      printf("Failed to dump error\n");
+    }
   }
+
+  // sample dump
+  e = err_l5();
+  if (e) {
+    char buf[1024];
+    if (cme_error_dump_to_str(e, sizeof(buf), buf) == 0) {
+      printf("\n=== Sample Error Trace ===\n%s", buf);
+    } else {
+      printf("Failed to dump error\n");
+    }
+  }
+
   cme_destroy();
   (void)sink;
 
