@@ -7,7 +7,6 @@
 - **Structured Errors**: Carry error code, message, file, function, and line info.
 - **Macro-Based Simplicity**: Use `cme_errorf` for consistent, minimal syntax.
 - **Safe Memory Management**: Explicit create/destroy API with fallback error.
-- **Minimal Footprint**: Written in pure C11, with no external dependencies.
 - **Fully Tested**: Built-in unit tests with Unity framework.
 
 ## 🧠 Example Usage
