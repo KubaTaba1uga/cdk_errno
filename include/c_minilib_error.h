@@ -14,7 +14,7 @@
 
 #define CME_STACK_MAX 16
 #define CME_RING_SIZE 64
-#define CME_STR_MAX 255
+#define CME_STR_MAX 256
 
 // Resolving symbols is quite cumbersome and require a lot of compilation flags
 // like -fno-omit-pointer, -fno-pie etc. Resolving symbols on compilation
@@ -30,7 +30,7 @@ struct __attribute__((aligned(64))) cme_Error {
   const char *msg;
   uint8_t frames_length;
   struct cme_Frame frames[CME_STACK_MAX];
-  char _msg_bug[CME_STR_MAX];
+  char _msg_buf[CME_STR_MAX];
 };
 
 typedef struct cme_Error *cme_error_t;
@@ -74,10 +74,10 @@ cme_error_create_fmt(int code, const char *file, const char *func, int line,
 
   va_list args;
   va_start(args, fmt);
-  vsnprintf(e->_msg_bug, CME_STR_MAX, fmt, args);
+  vsnprintf(e->_msg_buf, CME_STR_MAX, fmt, args);
   va_end(args);
 
-  e->msg = e->_msg_bug;
+  e->msg = e->_msg_buf;
   return e;
 }
 
