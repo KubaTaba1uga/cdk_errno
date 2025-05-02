@@ -6,90 +6,50 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef CME_ENABLE_BACKTRACE
-#include <execinfo.h>
-#define CME_MAX_BACKTRACE_FRAMES 16
-#endif
-
 #include "c_minilib_error.h"
+#include "common.h"
 
-static struct cme_Error generic_error = {
-    .code = -1,
-    .msg = "Generic error message",
-    .source_file = __FILE__,
-    .source_func = 0,
-    .source_line = 0,
-    .stack_size = 0,
-    .stack_symbols = NULL,
-};
+static struct cme_Error generic_error = {0};
 
 #define CREATE_GENERIC_ERROR(status_code, err_msg)                             \
+  generic_error.stack_length = 0;                                              \
   generic_error.code = (status_code);                                          \
-  generic_error.msg = (err_msg);                                               \
-  generic_error.source_func = (char *)__func__;                                \
-  generic_error.source_line = __LINE__
+  generic_error.source_line = __LINE__;                                        \
+  strncpy(generic_error.msg, err_msg, CME_STR_MAX);                            \
+  strncpy(generic_error.source_func, __func__, CME_STR_MAX);
 
 cme_error_t cme_error_create(int code, char *source_file, char *source_func,
                              int source_line, char *fmt, ...) {
-  cme_error_t err = malloc(sizeof(struct cme_Error));
+  cme_error_t err = calloc(1, sizeof(struct cme_Error));
   if (!err) {
     CREATE_GENERIC_ERROR(ENOMEM,
                          "Unable to allocate memory for `struct cme_Error`");
     return &generic_error;
   }
 
-  //// Fill error metadata
+  err->stack_length = 0;
   err->code = code;
   err->source_line = source_line;
-  err->source_file = source_file ? strdup(source_file) : NULL;
-  err->source_func = source_func ? strdup(source_func) : NULL;
-  err->msg = NULL;
-
-  //// Fill error backtrace
-#ifdef CME_ENABLE_BACKTRACE
-  // We need to skip two first frames to do not show user this func in trace
-  void *frames_buffer[CME_MAX_BACKTRACE_FRAMES + 2];
-  int total_frames = backtrace(frames_buffer, CME_MAX_BACKTRACE_FRAMES + 2);
-  if (total_frames > 2) {
-    err->stack_size = total_frames - 2;
-    err->stack_symbols = backtrace_symbols(frames_buffer + 2, err->stack_size);
-  } else {
-    err->stack_size = 0;
-    err->stack_symbols = NULL;
+  if (source_file) {
+    strncpy(err->source_file, source_file, CME_STR_MAX);
   }
-#else
-  err->stack_size = 0;
-  err->stack_symbols = NULL;
-#endif
+  if (source_func) {
+    strncpy(err->source_func, source_func, CME_STR_MAX);
+  }
 
-  //// Fill error message
   if (fmt) {
     va_list args;
     va_start(args, fmt);
-    int len = vsnprintf(NULL, 0, fmt, args);
+    vsnprintf(err->msg, CME_STR_MAX, fmt, args);
     va_end(args);
-
-    if (len < 0) {
-      cme_error_destroy(err);
-      CREATE_GENERIC_ERROR(EINVAL, "Invalid `struct cme_Error` variadic args");
-      return &generic_error;
-    }
-
-    err->msg = malloc(len + 1);
-    if (!err->msg) {
-      cme_error_destroy(err);
-      CREATE_GENERIC_ERROR(
-          ENOMEM, "Unable to allocate memory for `struct cme_Error` message");
-      return &generic_error;
-    }
-
-    va_start(args, fmt);
-    vsnprintf(err->msg, len + 1, fmt, args);
-    va_end(args);
+  } else {
+    strncpy(err->msg, "No message", CME_STR_MAX - 1);
+    err->msg[CME_STR_MAX - 1] = '\0';
   }
 
   return err;
@@ -99,78 +59,72 @@ void cme_error_destroy(cme_error_t err) {
   if (!err || err == &generic_error)
     return;
 
-  free(err->msg);
-  free(err->source_file);
-  free(err->source_func);
-
-#ifdef CME_ENABLE_BACKTRACE
-  free(err->stack_symbols);
-#endif
-
   free(err);
 }
 
-int cme_error_dump(cme_error_t err, char *path) {
-  const int buffer_max = 1024;
-  char buffer[buffer_max];
-  int offset = 0;
-  int written_bytes;
+int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer) {
+  if (!err || !buffer || n == 0) {
+    return EINVAL;
+  }
 
-  memset(buffer, 0, buffer_max);
+  size_t offset = 0;
+  int written;
 
-  /* Write the initial error dump */
-  written_bytes =
-      snprintf(buffer, buffer_max,
-               "====== ERROR DUMP ======\n"
-               "Error code: %d \n"
-               "Error code stringified: %s \n"
-               "Error message: %s \n"
-               "Src file: %s \n"
-               "Src line: %d \n"
-               "Src func: %s \n",
-               err->code, strerror(err->code), err->msg ? err->msg : "NULL",
-               err->source_file ? err->source_file : "NULL", err->source_line,
-               err->source_func ? err->source_func : "NULL");
-
-  if (written_bytes < 0 || written_bytes >= buffer_max) {
+  /* 1) Common fields */
+  written = cme_sprintf(buffer + offset, /* start writing at buffer[offset] */
+                        n - offset,      /* remaining space */
+                        "====== ERROR DUMP ======\n"
+                        "Error code: %d\n"
+                        "Error message: %s\n"
+                        "Src file: %s\n"
+                        "Src line: %d\n"
+                        "Src func: %s\n",
+                        err->code, err->msg, err->source_file, err->source_line,
+                        err->source_func);
+  if (written < 0) {
     return ENOBUFS;
   }
-  offset = written_bytes;
+  offset += (size_t)written;
 
 #ifdef CME_ENABLE_BACKTRACE
-  if (err->stack_symbols && err->stack_size) {
-    /* Append a separator (24 '-' characters) */
-    if (offset + 25 >= buffer_max) { // +1 for a newline
+  if (err->stack_length > 0) {
+    /* 2) Separator */
+    written =
+        cme_sprintf(buffer + offset, n - offset, "------------------------\n");
+    if (written < 0) {
       return ENOBUFS;
     }
-    memset(buffer + offset, '-', 24);
-    offset += 24;
-    buffer[offset++] = '\n';
+    offset += (size_t)written;
 
-    /* Append backtrace symbols */
-    for (int i = 0; i < err->stack_size; i++) {
-      written_bytes = snprintf(buffer + offset, buffer_max - offset, "%s\n",
-                               err->stack_symbols[i]);
-      if (written_bytes < 0 || written_bytes >= buffer_max - offset) {
+    /* 3) Frame addresses */
+    for (int i = 0; i < err->stack_length; ++i) {
+      written = cme_sprintf(buffer + offset, n - offset, "[%p]\n",
+                            err->stack_symbols[i]);
+      if (written < 0) {
         return ENOBUFS;
       }
-      offset += written_bytes;
+      offset += (size_t)written;
     }
   }
 #endif
 
+  return 0;
+}
+
+int cme_error_dump_to_file(cme_error_t err, char *path) {
   /* Write the full dump to file */
   FILE *file = fopen(path, "w");
   if (!file) {
     return errno;
   }
 
-  written_bytes = fwrite(buffer, sizeof(char), offset, file);
-  fclose(file);
+  char buffer[4096];
 
-  if (written_bytes != offset) {
-    return ENOBUFS;
-  }
+  cme_error_dump_to_str(err, sizeof(buffer) / sizeof(char), buffer);
+
+  fwrite(buffer, sizeof(char), strlen(buffer), file);
+
+  fclose(file);
 
   return 0;
 }

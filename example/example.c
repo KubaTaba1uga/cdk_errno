@@ -15,11 +15,11 @@ cme_error_t demo_error_logic(void) {
   struct cme_Error *err;
 
   if ((err = good_function())) {
-    return err;
+    return cme_return(err);
   }
 
   if ((err = error_function())) {
-    return err;
+    return cme_return(err);
   }
 
   return NULL;
@@ -30,7 +30,10 @@ void app() {
 
   if ((err = demo_error_logic())) {
     const char *dump_file = "error_dump.txt";
-    cme_error_dump(err, (char *)dump_file);
+    cme_error_dump_to_file(err, (char *)dump_file);
+    char err_buffer[4096];
+    cme_error_dump_to_str(err, sizeof(err_buffer), err_buffer);
+    printf("%s", err_buffer);
     cme_error_destroy(err);
   }
 }
