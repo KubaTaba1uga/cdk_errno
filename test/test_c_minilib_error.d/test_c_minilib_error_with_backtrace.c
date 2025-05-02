@@ -9,6 +9,10 @@
 #include "common.h"
 #include <unity.h>
 
+void setUp() { cme_init(); }
+
+void tearDown() { cme_destroy(); }
+
 // Verifies code, message, and the first backtrace symbol fields
 void test_create_error_with_backtrace_fields(void) {
   struct cme_Error *err = cme_errorf(300, "Field test");

@@ -9,6 +9,10 @@
 #include "common.h"
 #include <unity.h>
 
+void setUp() { cme_init(); }
+
+void tearDown() { cme_destroy(); }
+
 void test_create_error_success(void) {
   struct cme_Error *err = cme_error_create(42, "test.c", "test_func", 123,
                                            "Failed with code %d", 42);

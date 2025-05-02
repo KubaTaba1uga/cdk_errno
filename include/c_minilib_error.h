@@ -6,7 +6,12 @@
 #ifndef C_MINILIB_ERROR_H
 #define C_MINILIB_ERROR_H
 
+/* We have these settings available: */
+/* - CME_ENABLE_BACKTRACE, enable backtrace gathering in code, small performance
+ *   hit (like 2x) for gathering return path. */
+
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef CME_ENABLE_BACKTRACE
@@ -38,12 +43,23 @@ struct __attribute__((aligned(8))) cme_Error {
 
 typedef struct cme_Error *cme_error_t;
 
+struct cme_Settings {
+  int32_t ring_size;     // by default: 32
+  bool is_ring_growable; // by default: false
+};
+
+int cme_init(void);
+
+void cme_configure(struct cme_Settings *settings);
+
+void cme_destroy(void);
+
 // Create error
 cme_error_t cme_error_create(int code, char *source_file, char *source_func,
                              int source_line, char *fmt, ...);
 
 // Destroy error
-void cme_error_destroy(cme_error_t);
+void cme_error_destroy(cme_error_t err);
 
 // Handy macro
 #define cme_errorf(code, fmt, ...)                                             \

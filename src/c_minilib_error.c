@@ -5,6 +5,7 @@
  */
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,24 +15,48 @@
 #include "c_minilib_error.h"
 #include "common.h"
 
-static struct cme_Error generic_error = {0};
+static struct cme_Settings cme_settings = {.ring_size = 32,
+                                           .is_ring_growable = false};
+static struct cme_Error *cme_ringbuf = NULL;
+static uint32_t cme_ringbuf_i = 0;
 
-#define CREATE_GENERIC_ERROR(status_code, err_msg)                             \
-  snprintf(generic_error.msg, CME_STR_MAX, "%s", (err_msg));                   \
-  generic_error.code = (status_code);                                          \
-  generic_error.stack_length = 1;                                              \
-  generic_error.stack_symbols[0].source_file = __FILE__;                       \
-  generic_error.stack_symbols[0].source_func = __func__;                       \
-  generic_error.stack_symbols[0].source_line = __LINE__;
+int cme_init(void) {
+  if (cme_ringbuf) {
+    return 0;
+  }
+
+  cme_ringbuf = calloc(cme_settings.ring_size, sizeof(struct cme_Error));
+  if (!cme_ringbuf) {
+    return ENOMEM;
+  }
+
+  cme_ringbuf_i = 0;
+
+  return 0;
+}
+
+void cme_configure(struct cme_Settings *settings) {
+  if (!settings) {
+    return;
+  }
+
+  cme_settings.ring_size = settings->ring_size;
+  cme_settings.is_ring_growable = settings->is_ring_growable;
+};
+
+void cme_destroy(void) {
+  if (!cme_ringbuf) {
+    return;
+  }
+
+  free(cme_ringbuf);
+  cme_ringbuf = NULL;
+  cme_ringbuf_i = 0;
+}
 
 cme_error_t cme_error_create(int code, char *source_file, char *source_func,
                              int source_line, char *fmt, ...) {
-  cme_error_t err = calloc(1, sizeof(struct cme_Error));
-  if (!err) {
-    CREATE_GENERIC_ERROR(ENOMEM,
-                         "Unable to allocate memory for `struct cme_Error`");
-    return &generic_error;
-  }
+  cme_error_t err = &cme_ringbuf[cme_ringbuf_i++ % cme_settings.ring_size];
 
   err->code = code;
   err->stack_length = 1;
@@ -52,11 +77,11 @@ cme_error_t cme_error_create(int code, char *source_file, char *source_func,
 }
 
 void cme_error_destroy(cme_error_t err) {
-  if (!err || err == &generic_error) {
+  if (!err) {
     return;
   }
 
-  free(err);
+  memset(err, 0, sizeof(struct cme_Error));
 }
 
 int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer) {

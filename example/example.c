@@ -26,6 +26,11 @@ cme_error_t demo_error_logic(void) {
 }
 
 void app() {
+  cme_configure(
+      &(struct cme_Settings){.is_ring_growable = false, .ring_size = 16});
+
+  cme_init();
+
   cme_error_t err;
 
   if ((err = demo_error_logic())) {
@@ -36,6 +41,8 @@ void app() {
     printf("%s", err_buffer);
     cme_error_destroy(err);
   }
+
+  cme_destroy();
 }
 
 int main(void) {
