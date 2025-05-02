@@ -1,8 +1,8 @@
-#ifndef C_MINILIB_ERROR_H
-#define C_MINILIB_ERROR_H
+#ifndef CME_ERROR_H
+#define CME_ERROR_H
 
+#include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #define CME_STR_MAX 255
 #define CME_STACK_MAX 1
@@ -22,6 +22,7 @@ struct cme_Error {
 
 typedef struct cme_Error *cme_error_t;
 
-int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer);
+int cme_error_dump_to_str(cme_error_t err, uint32_t size, char *buf);
+void cme_error_destroy(cme_error_t err);
 
-#endif // C_MINILIB_ERROR_H
+#endif

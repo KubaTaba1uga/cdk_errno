@@ -1,6 +1,8 @@
-project('cme_static_ringbuf_example', 'c')
+project('allocator-benchmark', 'c', default_options: ['c_std=c11'])
 
-executable('ringbuf_demo',
-  sources: ['main.c', 'ringbuf.c'],
-  include_directories: include_directories('.')
+add_project_arguments('-Wall', '-Wextra', '-O2', language: 'c')
+
+executable('alloc_bench',
+  ['main.c', 'allocator_malloc.c', 'allocator_ringbuf.c'],
+  include_directories: '.',
 )
