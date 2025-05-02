@@ -123,3 +123,20 @@ int cme_error_dump_to_file(cme_error_t err, char *path) {
 
   return 0;
 }
+
+cme_error_t cme_return(cme_error_t err) {
+#ifndef CME_ENABLE_BACKTRACE
+  return err;
+#else
+  if (!err) {
+    return err;
+  }
+
+  if (err->stack_length < CME_STACK_MAX) {
+    err->stack_symbols[err->stack_length++] =
+        __builtin_extract_return_addr(__builtin_return_address(0));
+  }
+
+  return err;
+#endif
+};

@@ -56,21 +56,7 @@ int cme_error_dump_to_file(cme_error_t err, char *file_path);
 // Dump error to string
 int cme_error_dump_to_str(cme_error_t err, uint32_t n, char *buffer);
 
-static inline cme_error_t cme_return(cme_error_t err) {
-#ifndef CME_ENABLE_BACKTRACE
-  return err;
-#else
-  if (!err) {
-    return err;
-  }
-
-  if (err->stack_length < CME_STACK_MAX) {
-    err->stack_symbols[err->stack_length++] =
-        __builtin_extract_return_addr(__builtin_return_address(0));
-  }
-
-  return err;
-#endif
-}
+// Return wrapper
+cme_error_t cme_return(cme_error_t err);
 
 #endif // C_MINILIB_CONFIG_ERROR_H
