@@ -26,3 +26,17 @@ test_c_minilib_error_with_backtrace_exe = executable('test_c_minilib_error_with_
 )
 
 test('test_c_minilib_error_with_backtrace', test_c_minilib_error_with_backtrace_exe)
+
+test_c_minilib_error_ringbuffer_name = 'test_c_minilib_error_ringbuffer.c'
+
+test_c_minilib_error_ringbuffer_exe = executable('test_c_minilib_error_ringbuffer',
+  sources: [
+   sources,
+   test_c_minilib_error_ringbuffer_name,
+   test_runner.process(test_c_minilib_error_ringbuffer_name),           
+  ],
+  dependencies: test_dependencies,
+  include_directories: include_directories('../../include'),  
+)
+
+test('test_c_minilib_error_ringbuffer', test_c_minilib_error_ringbuffer_exe)
