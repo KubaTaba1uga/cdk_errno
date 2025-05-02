@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "method_asm.h" // ← include the new stack-RA method
+#include "method_asm.h"
 #include "method_backtrace.h"
+#include "method_compiled_in.h"
 #include "method_manual.h"
 
 #define N_ITER 100000
@@ -106,6 +107,39 @@ int main(void) {
   printf("Example ASM raw addresses:\n");
   cme_dump_backtrace(stdout, frames_asm, trace_asm);
   free(trace_asm);
+
+  // === compiled static trace (source-level info) ===
+  struct SingleTrace *trace_compiled = NULL;
+  int frames_compiled = 0;
+  double total_ns_compiled = 0.0;
+
+  start = get_time_ns();
+  for (int i = 0; i < N_ITER; ++i) {
+    struct SingleTrace *buf = malloc(sizeof(struct SingleTrace) * TRACE_DEPTH);
+    if (!buf) {
+      perror("malloc");
+      return 1;
+    }
+    run_compiled_trace(buf, &frames_compiled);
+    if (i == N_ITER - 1)
+      trace_compiled = buf;
+    else
+      free(buf);
+  }
+  end = get_time_ns();
+  total_ns_compiled = end - start;
+
+  printf("Compiled trace: total = %.2f ms, avg = %.2f ns/iter\n",
+         total_ns_compiled / 1e6, total_ns_compiled / N_ITER);
+  printf("Example compiled trace entries:\n");
+  if (trace_compiled) {
+    fprintf(stdout, "------------------------\n");
+    for (int i = 0; i < frames_compiled; ++i) {
+      fprintf(stdout, "[%s:%d] %s\n", trace_compiled[i].source_file,
+              trace_compiled[i].source_line, trace_compiled[i].source_func);
+    }
+    free(trace_compiled);
+  }
 
   return 0;
 }
