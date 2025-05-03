@@ -1,111 +1,70 @@
-// test/test_c_minilib_error.d/test_c_minilib_error.c
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
 #include "c_minilib_error.h"
 #include "common.h"
+#include <string.h>
 #include <unity.h>
 
 void setUp() { cme_init(); }
-
 void tearDown() { cme_destroy(); }
 
-void test_create_error_success(void) {
-  struct cme_Error *err = cme_error_create(42, "test.c", "test_func", 123,
-                                           "Failed with code %d", 42);
-
+void test_literal_error_creation(void) {
+  cme_error_t err = cme_error(42, "Simple literal error");
   TEST_ASSERT_NOT_NULL(err);
   TEST_ASSERT_EQUAL(42, err->code);
-  TEST_ASSERT_EQUAL_STRING("test.c", err->stack_symbols[0].source_file);
-  TEST_ASSERT_EQUAL_STRING("test_func", err->stack_symbols[0].source_func);
-  TEST_ASSERT_EQUAL(123, err->stack_symbols[0].source_line);
-  TEST_ASSERT_EQUAL_STRING("Failed with code 42", err->msg);
-
-  cme_error_destroy(err);
+  TEST_ASSERT_EQUAL_STRING("Simple literal error", err->msg);
+  TEST_ASSERT_EQUAL_UINT8(1, err->frames_length);
 }
 
-void test_create_error_null_source(void) {
-  struct cme_Error *err = cme_error_create(99, NULL, NULL, 0, "Just a message");
-
+void test_formatted_error_creation(void) {
+  cme_error_t err = cme_errorf(5, "Failure with code %d", 5);
   TEST_ASSERT_NOT_NULL(err);
-  TEST_ASSERT_EQUAL(99, err->code);
-  TEST_ASSERT_EQUAL_STRING("Just a message", err->msg);
-
-  cme_error_destroy(err);
+  TEST_ASSERT_EQUAL(5, err->code);
+  TEST_ASSERT_EQUAL_STRING("Failure with code 5", err->msg);
+  TEST_ASSERT_EQUAL_UINT8(1, err->frames_length);
 }
 
-void test_create_error_invalid_format(void) {
-  struct cme_Error *err = cme_error_create(1, "x.c", "func", 1, NULL);
-
-  TEST_ASSERT_NOT_NULL(err);
-  TEST_ASSERT_EQUAL(1, err->code);
-  TEST_ASSERT_EQUAL_STRING("No message", err->msg);
-
-  cme_error_destroy(err);
+void test_error_dump_to_str(void) {
+  cme_error_t err = cme_errorf(100, "Format error %d", 100);
+  char buf[1024];
+  int ret = cme_error_dump_to_str(err, sizeof(buf), buf);
+  TEST_ASSERT_EQUAL_INT(0, ret);
+  TEST_ASSERT_NOT_NULL(strstr(buf, "Format error 100"));
 }
 
-void test_destroy_null(void) { cme_error_destroy(NULL); }
-
-void test_create_error_multiple_format_args(void) {
-  struct cme_Error *err =
-      cme_error_create(7, "multi.c", "multi_func", 77, "Error code %d at %s:%d",
-                       7, "multi.c", 77);
-
-  TEST_ASSERT_NOT_NULL(err);
-  TEST_ASSERT_EQUAL(7, err->code);
-  TEST_ASSERT_EQUAL_STRING("multi.c", err->stack_symbols[0].source_file);
-  TEST_ASSERT_EQUAL_STRING("multi_func", err->stack_symbols[0].source_func);
-  TEST_ASSERT_EQUAL(77, err->stack_symbols[0].source_line);
-  TEST_ASSERT_EQUAL_STRING("Error code 7 at multi.c:77", err->msg);
-
-  cme_error_destroy(err);
-}
-
-void test_create_error_no_format_string(void) {
-  struct cme_Error *err =
-      cme_error_create(88, "plain.c", "plain_func", 88, "Static message");
-
-  TEST_ASSERT_NOT_NULL(err);
-  TEST_ASSERT_EQUAL(88, err->code);
-  TEST_ASSERT_EQUAL_STRING("plain.c", err->stack_symbols[0].source_file);
-  TEST_ASSERT_EQUAL_STRING("plain_func", err->stack_symbols[0].source_func);
-  TEST_ASSERT_EQUAL(88, err->stack_symbols[0].source_line);
-  TEST_ASSERT_EQUAL_STRING("Static message", err->msg);
-
-  cme_error_destroy(err);
-}
-
-void test_cme_error_dump_tmp(void) {
-  struct cme_Error err;
-  err.code = 42;
-  err.stack_length = 1;
-  strncpy(err.msg, "Temporary error message", CME_STR_MAX);
-  err.stack_symbols[0].source_file = "test_tmp.c";
-  err.stack_symbols[0].source_func = "test_tmp_func";
-  err.stack_symbols[0].source_line = 100;
-
-  char *temp_file = create_temp_file_path();
-  TEST_ASSERT_NOT_NULL(temp_file);
-
-  int ret = cme_error_dump_to_file(&err, temp_file);
+void test_error_dump_to_file(void) {
+  cme_error_t err = cme_error(7, "File dump test");
+  char *tmp = create_temp_file_path();
+  TEST_ASSERT_NOT_NULL(tmp);
+  int ret = cme_error_dump_to_file(err, tmp);
   TEST_ASSERT_EQUAL_INT(0, ret);
 
-  FILE *fp = fopen(temp_file, "r");
+  FILE *fp = fopen(tmp, "r");
   TEST_ASSERT_NOT_NULL(fp);
-
   char buf[2048];
   size_t n = fread(buf, 1, sizeof(buf) - 1, fp);
   buf[n] = '\0';
   fclose(fp);
 
-  TEST_ASSERT_NOT_NULL(strstr(buf, "====== ERROR DUMP ======"));
-  TEST_ASSERT_NOT_NULL(strstr(buf, "Error code: 42"));
-  TEST_ASSERT_NOT_NULL(strstr(buf, err.msg));
-  TEST_ASSERT_NOT_NULL(strstr(buf, "0:test_tmp_func:test_tmp.c:100"));
+  TEST_ASSERT_NOT_NULL(strstr(buf, "File dump test"));
+  remove(tmp);
+  free(tmp);
+}
 
-  remove(temp_file);
-  free(temp_file);
+void test_null_error_handling(void) {
+  TEST_ASSERT_EQUAL_INT(EINVAL,
+                        cme_error_dump_to_str(NULL, 100, (char[100]){}));
+  TEST_ASSERT_EQUAL_INT(EINVAL, cme_error_dump_to_str((cme_error_t)1, 0, NULL));
+}
+
+void test_multiple_formatted_args(void) {
+  cme_error_t err = cme_errorf(7, "Multiple %d %s %c", 123, "args", '!');
+  TEST_ASSERT_NOT_NULL(err);
+  TEST_ASSERT_EQUAL(7, err->code);
+  TEST_ASSERT_EQUAL_STRING("Multiple 123 args !", err->msg);
+}
+
+void test_no_format_string(void) {
+  cme_error_t err = cme_error(88, "Static message");
+  TEST_ASSERT_NOT_NULL(err);
+  TEST_ASSERT_EQUAL(88, err->code);
+  TEST_ASSERT_EQUAL_STRING("Static message", err->msg);
 }
