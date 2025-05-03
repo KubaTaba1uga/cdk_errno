@@ -11,23 +11,18 @@ project('c_minilib_error', 'c',
          ],
 )
 
-cc = meson.get_compiler('c')
-
 # ******************************************************************************
 # *    Library
 # ******************************************************************************
 if get_option('backtrace')
-  add_project_arguments(['-DCME_ENABLE_BACKTRACE', '-fno-pie', '-fno-omit-frame-pointer'], language: 'c')
-  add_project_link_arguments('-no-pie', language: 'c')
+  add_project_arguments(['-DCME_ENABLE_BACKTRACE'], language: 'c')
 endif
-
-subdir('src')
 
 add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 
 c_minilib_error_inc = ['include']
 
-c_minilib_error_lib = library('c_minilib_error', sources, include_directories: c_minilib_error_inc)
+c_minilib_error_lib = library('c_minilib_error', include_directories: c_minilib_error_inc)
 
 c_minilib_error_dep = declare_dependency(
   link_with: c_minilib_error_lib,
