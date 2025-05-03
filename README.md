@@ -1,54 +1,58 @@
 # c_minilib_error
 
-**`c_minilib_error`** is a lightweight C library for structured error handling. It captures rich error context, including message, code, file, function, and line number—using a clean, macro-based interface.
+**`c_minilib_error`** is a minimal and fast C library for structured error reporting. It supports lightweight stack tracing, optional formatted messages, and a circular ring buffer backend—all designed with embedded and low-overhead systems in mind.
 
 ## ✨ Features
 
-- **Structured Errors**: Carry error code, message, file, function, and line info.
-- **Macro-Based Simplicity**: Use `cme_errorf` for consistent, minimal syntax.
-- **Safe Memory Management**: Explicit create/destroy API with fallback error.
-- **Fully Tested**: Built-in unit tests with Unity framework.
+- 📌 **Structured error objects**: Includes code, message, file, function, and line
+- 🧵 **Inline call trace tracking**: Record stack frames using `cme_return()`
+- 🧠 **Formatted errors**: Optional `printf`-style formatting
+- ♻️ **Allocation-free runtime**: Uses a circular buffer, no dynamic allocations in hot paths
+- 🧪 **Dump utilities**: Export errors to file or string buffer
+- 🧼 **Self-contained header-only**: Minimal dependencies, drop-in ready
 
-## 🧠 Example Usage
+## 🔧 Usage
 
 ```c
 #include "c_minilib_error.h"
-#include <stdio.h>
 
-// Level 3: Generates the error
-struct cme_Error *level3(void) {
-    return cme_errorf(101, "Level 3 failure: invalid state");
+cme_error_t deep_error(void) {
+  return cme_errorf(42, "Sensor read failure: value=%d", -1);
 }
 
-// Level 2: Wraps level 3
-struct cme_Error *level2(void) {
-    return cme_return(level3());
-}
-
-// Level 1: Wraps level 2
-struct cme_Error *level1(void) {
-    return cme_return(level2());
+cme_error_t wrapped_error(void) {
+  return cme_return(deep_error());
 }
 
 int main(void) {
-    struct cme_Error *err = level1();
-    if (err) {
-        // Dump to file
-        cme_error_dump_to_file(err, "error_dump.txt");
+  cme_init();
 
-        // Dump to string buffer
-        char buffer[1024];
-        cme_error_dump_to_str(err, sizeof(buffer), buffer);
-        fprintf(stderr, "%s", buffer);
+  cme_error_t err = wrapped_error();
+  if (err) {
+    char buf[1024];
+    if (cme_error_dump_to_str(err, sizeof(buf), buf) == 0)
+      fprintf(stderr, "%s", buf);
+    cme_error_dump_to_file(err, "trace.log");
+  }
 
-        // Cleanup
-        cme_error_destroy(err);
-    }
-    return 0;
+  cme_destroy();
+  return 0;
 }
 ```
 
-## ⚙️ Build Instructions
+## 🧱 API Overview
+
+| Function                   | Description                           |
+| -------------------------- | ------------------------------------- |
+| `cme_init()`               | Allocate internal ring buffer         |
+| `cme_destroy()`            | Free ring buffer                      |
+| `cme_error()`              | Create literal string error           |
+| `cme_errorf()`             | Create formatted error                |
+| `cme_return(err)`          | Propagate error and add current frame |
+| `cme_error_dump_to_str()`  | Dump trace to a buffer                |
+| `cme_error_dump_to_file()` | Dump trace to a file                  |
+
+## 🛠️ Building
 
 Using [Meson](https://mesonbuild.com/):
 
@@ -57,63 +61,28 @@ meson setup build
 meson compile -C build
 ```
 
-## ✅ Run Tests
+## ✅ Running Tests
 
 ```sh
 meson test -C build
 ```
 
-Tests are based on [Unity](https://www.throwtheswitch.org/unity).
+Unit tests are implemented using [Unity](https://www.throwtheswitch.org/unity).
 
-## 🧰 Development Tools
+## ⚙️ Dev Tools
 
-Automated with [Invoke](https://www.pyinvoke.org/):
+Automate with [Invoke](https://www.pyinvoke.org/):
 
 ```sh
-inv install    # Install required tools
-inv build      # Configure & compile
-inv test       # Run tests
-inv format     # Format source files (clang-format)
-inv lint       # Run static analysis (clang-tidy)
-inv clean      # Remove build & temp files
-```
-
-## 🧪 Backtrace Decoding (Debugging)
-
-To decode addresses from a dumped backtrace, use the provided Python script:
-
-```bash
-tools/translate_err_dump.py <error_dump_file> <executable>
-```
-
-**Example:**
-
-```bash
-inv build -b
-./build/example/example
-python3 tools/translate_err_dump.py error_dump.txt build/example/example
-```
-
-Make sure `addr2line` is available:
-
-```bash
-sudo apt install binutils
-```
-
-> ℹ️ **Disable ASLR (Address Space Layout Randomization)**  
-Backtrace addresses may vary due to ASLR. For consistent decoding, disable it temporarily (until reboot):
-
-```bash
-echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
-```
-
-To restore the default (enabled):
-
-```bash
-echo 2 | sudo tee /proc/sys/kernel/randomize_va_space
+inv install     # Setup tools
+inv build       # Compile project
+inv test        # Run test suite
+inv format      # Apply clang-format
+inv lint        # Run clang-tidy checks
+inv clean       # Clean build artifacts
 ```
 
 ## 📄 License
 
-MIT License. See [LICENSE](LICENSE) for full text.
+Licensed under the [MIT License](LICENSE) © 2025 Jakub Buczynski (KubaTaba1uga).
 
