@@ -134,8 +134,9 @@ static inline __attribute__((always_inline)) uint32_t cme_next_idx(void) {
 /**
  * Create a simple error (no formatting).
  */
-static inline __attribute__((always_inline)) cme_error_t cme_error_create(
-    int code, const char *file, const char *func, int line, const char *msg) {
+static inline __attribute__((always_inline)) cme_error_t
+cme_error_create(int code, const char *file, const char *func, int line,
+                 const char *msg) {
   if (!cme_ringbuf) {
     return NULL;
   }
@@ -173,8 +174,9 @@ cme_error_create_fmt(int code, const char *file, const char *func, int line,
 /**
  * Push a backtrace frame onto an existing error.
  */
-static inline __attribute__((always_inline)) cme_error_t cme_error_push_symbol(
-    cme_error_t err, const char *file, const char *func, int line) {
+static inline __attribute__((always_inline)) cme_error_t
+cme_error_push_frame(cme_error_t err, const char *file, const char *func,
+                     int line) {
 #ifdef CME_ENABLE_BACKTRACE
   if (err && err->frames_length < CME_STACK_MAX) {
     err->frames[err->frames_length++] =
@@ -277,6 +279,6 @@ static inline void cme_error_destroy(cme_error_t err) { (void)err; }
  * Propagate an error and add caller frame.
  */
 #define cme_return(ERR)                                                        \
-  cme_error_push_symbol((ERR), __FILE__, __func__, __LINE__)
+  cme_error_push_frame((ERR), __FILE__, __func__, __LINE__)
 
 #endif // C_MINILIB_ERROR_H
