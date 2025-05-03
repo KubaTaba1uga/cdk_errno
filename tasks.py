@@ -106,8 +106,8 @@ def test(c, name=None):
 @task
 def lint(c):
     patterns = [
-        "src/**/*.c",
-        "src/**/*.h",
+        "src/*.c",
+        "include/*.h",
     ]
 
     _pr_info("Linting...")
@@ -126,8 +126,8 @@ def lint(c):
 @task
 def format(c):
     patterns = [
-        "src/**/*.c",
-        "src/**/*.h",
+        "src/*.c",
+        "include/*.h",
     ]
 
     _pr_info("Formating...")

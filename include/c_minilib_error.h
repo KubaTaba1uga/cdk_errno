@@ -98,8 +98,9 @@ static uint32_t cme_ringbuf_i = 0;
  * Allocates the ring buffer.
  */
 static inline int cme_init(void) {
-  if (cme_ringbuf)
+  if (cme_ringbuf) {
     return 0;
+  }
   cme_ringbuf = malloc(CME_RING_SIZE * sizeof(struct cme_Error));
   return cme_ringbuf ? 0 : ENOMEM;
 }
@@ -133,11 +134,11 @@ static inline __attribute__((always_inline)) uint32_t cme_next_idx(void) {
 /**
  * Create a simple error (no formatting).
  */
-static inline __attribute__((always_inline)) cme_error_t
-cme_error_create(int code, const char *file, const char *func, int line,
-                 const char *msg) {
-  if (!cme_ringbuf)
+static inline __attribute__((always_inline)) cme_error_t cme_error_create(
+    int code, const char *file, const char *func, int line, const char *msg) {
+  if (!cme_ringbuf) {
     return NULL;
+  }
   cme_error_t e = &cme_ringbuf[cme_next_idx()];
   e->code = (uint8_t)code;
   e->msg = msg;
@@ -152,8 +153,9 @@ cme_error_create(int code, const char *file, const char *func, int line,
 static inline __attribute__((always_inline)) cme_error_t
 cme_error_create_fmt(int code, const char *file, const char *func, int line,
                      const char *fmt, ...) {
-  if (!cme_ringbuf)
+  if (!cme_ringbuf) {
     return NULL;
+  }
   cme_error_t e = &cme_ringbuf[cme_next_idx()];
   e->code = (uint8_t)code;
   e->frames_length = 1;
@@ -171,13 +173,13 @@ cme_error_create_fmt(int code, const char *file, const char *func, int line,
 /**
  * Push a backtrace frame onto an existing error.
  */
-static inline __attribute__((always_inline)) cme_error_t
-cme_error_push_symbol(cme_error_t err, const char *file, const char *func,
-                      int line) {
+static inline __attribute__((always_inline)) cme_error_t cme_error_push_symbol(
+    cme_error_t err, const char *file, const char *func, int line) {
 #ifdef CME_ENABLE_BACKTRACE
-  if (err && err->frames_length < CME_STACK_MAX)
+  if (err && err->frames_length < CME_STACK_MAX) {
     err->frames[err->frames_length++] =
         (struct cme_Frame){file, func, (uint32_t)line};
+  }
 #else
   (void)file;
   (void)func;
@@ -194,8 +196,9 @@ cme_error_push_symbol(cme_error_t err, const char *file, const char *func,
  */
 static inline int cme_error_dump_to_str(cme_error_t err, uint32_t n,
                                         char *buffer) {
-  if (!err || !buffer || n == 0)
+  if (!err || !buffer || n == 0) {
     return EINVAL;
+  }
 
   size_t offset = 0;
   int written;
@@ -205,13 +208,15 @@ static inline int cme_error_dump_to_str(cme_error_t err, uint32_t n,
                      "Error code: %d\n"
                      "Error message: %s\n",
                      err->code, err->msg);
-  if (written < 0 || (size_t)written >= n - offset)
+  if (written < 0 || (size_t)written >= n - offset) {
     return ENOBUFS;
+  }
   offset += (size_t)written;
 
   written = snprintf(buffer + offset, n - offset, "------------------------\n");
-  if (written < 0 || (size_t)written >= n - offset)
+  if (written < 0 || (size_t)written >= n - offset) {
     return ENOBUFS;
+  }
   offset += (size_t)written;
 
   for (size_t i = 0; i < err->frames_length; i++) {
@@ -219,8 +224,9 @@ static inline int cme_error_dump_to_str(cme_error_t err, uint32_t n,
     written =
         snprintf(buffer + offset, n - offset, "%u:%s:%s:%u\n", (unsigned)i,
                  f->func ? f->func : "??", f->file ? f->file : "??", f->line);
-    if (written < 0 || (size_t)written >= n - offset)
+    if (written < 0 || (size_t)written >= n - offset) {
       return ENOBUFS;
+    }
     offset += (size_t)written;
   }
 
@@ -232,8 +238,9 @@ static inline int cme_error_dump_to_str(cme_error_t err, uint32_t n,
  */
 static inline int cme_error_dump_to_file(cme_error_t err, char *path) {
   FILE *file = fopen(path, "w");
-  if (!file)
+  if (!file) {
     return errno;
+  }
 
   char buffer[4096];
   if (cme_error_dump_to_str(err, sizeof(buffer), buffer) != 0) {
