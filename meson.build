@@ -20,9 +20,11 @@ endif
 
 add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 
+subdir('src')
+
 c_minilib_error_inc = ['include']
 
-c_minilib_error_lib = library('c_minilib_error', include_directories: c_minilib_error_inc)
+c_minilib_error_lib = library('c_minilib_error', sources, include_directories: c_minilib_error_inc)
 
 c_minilib_error_dep = declare_dependency(
   link_with: c_minilib_error_lib,

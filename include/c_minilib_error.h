@@ -83,12 +83,13 @@ typedef struct cme_Error *cme_error_t;
 /**
  * Error ring buffer storage (internal).
  */
-static struct cme_Error *cme_ringbuf = NULL;
+extern struct cme_Error *cme_ringbuf;
+extern struct cme_Error _cme_error_fallback;
 
 /**
  * Internal buffer write index.
  */
-static uint32_t cme_ringbuf_i = 0;
+extern uint32_t cme_ringbuf_i;
 
 /******************************************************************************
  *                             General                                        *
@@ -138,8 +139,15 @@ static inline __attribute__((always_inline)) cme_error_t
 cme_error_create(int code, const char *file, const char *func, int line,
                  const char *msg) {
   if (!cme_ringbuf) {
-    return NULL;
+    _cme_error_fallback.code = ENOMEM;
+    _cme_error_fallback.msg = "cme_ringbuf is not initialized";
+    _cme_error_fallback.frames_length = 1;
+    _cme_error_fallback.frames[0] =
+        (struct cme_Frame){__FILE__, __func__, (uint32_t)__LINE__};
+
+    return &_cme_error_fallback;
   }
+
   cme_error_t e = &cme_ringbuf[cme_next_idx()];
   e->code = (uint8_t)code;
   e->msg = msg;
@@ -155,7 +163,13 @@ static inline __attribute__((always_inline)) cme_error_t
 cme_error_create_fmt(int code, const char *file, const char *func, int line,
                      const char *fmt, ...) {
   if (!cme_ringbuf) {
-    return NULL;
+    _cme_error_fallback.code = ENOMEM;
+    _cme_error_fallback.msg = "cme_ringbuf is not initialized";
+    _cme_error_fallback.frames_length = 1;
+    _cme_error_fallback.frames[0] =
+        (struct cme_Frame){__FILE__, __func__, (uint32_t)__LINE__};
+
+    return &_cme_error_fallback;
   }
   cme_error_t e = &cme_ringbuf[cme_next_idx()];
   e->code = (uint8_t)code;
@@ -207,9 +221,9 @@ static inline int cme_error_dump_to_str(cme_error_t err, uint32_t n,
 
   written = snprintf(buffer + offset, n - offset,
                      "====== ERROR DUMP ======\n"
-                     "Error code: %d\n"
+                     "Error code: %s\n"
                      "Error message: %s\n",
-                     err->code, err->msg);
+                     strerror(err->code), err->msg);
   if (written < 0 || (size_t)written >= n - offset) {
     return ENOBUFS;
   }
