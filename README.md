@@ -9,7 +9,6 @@
 - 🧠 **Formatted errors**: Optional `printf`-style formatting
 - ♻️ **Allocation-free runtime**: Uses a circular buffer, no dynamic allocations in hot paths
 - 🧪 **Dump utilities**: Export errors to file or string buffer
-- 🧼 **Self-contained header-only**: Minimal dependencies, drop-in ready
 
 ## 🔧 Usage
 
