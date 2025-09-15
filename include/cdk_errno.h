@@ -69,9 +69,29 @@
 #define CDK_ERRNO_FSTR_MAX 1024
 #endif
 
+#ifndef CDK_ERRNO_BTRACE_ENABLE
+#define CDK_ERRNO_BTRACE_ENABLE 1
+#endif
+
+#ifndef CDK_ERRNO_BTRACE_MAX
+#define CDK_ERRNO_BTRACE_MAX 32
+#endif
+
 /******************************************************************************
  *                             Data types                                     *
  ******************************************************************************/
+/**
+ * Backtrace frame (file/function/line tuple).
+ */
+struct cdk_BTrace {
+  const char *file;
+  const char *func;
+  uint32_t line;
+};
+
+/**
+ * Error object.
+ */
 struct cdk_Errno {
   uint16_t code;
 
@@ -81,6 +101,11 @@ struct cdk_Errno {
 
 #if CDK_ERRNO_FSTR_ENABLE == 1
   char _msg_buf[CDK_ERRNO_FSTR_MAX];
+#endif
+
+#if CDK_ERRNO_BTRACE_ENABLE == 1
+  struct cdk_BTrace btraces[CDK_ERRNO_BTRACE_MAX];
+  size_t btraces_len;
 #endif
 };
 
@@ -105,20 +130,48 @@ thread_local extern struct cdk_Errno cdk_thread_error;
  * Create new errno. The value created by this function should
  *   be used to set cdk_errno.
  */
-static inline struct cdk_Errno *cdk_error(uint16_t code) {
+#if CDK_ERRNO_BTRACE_ENABLE == 1
+static inline cdk_errno_t cdk_error_create(uint16_t code, const char *file,
+                                           const char *func, int line) {
+  cdk_thread_error = (struct cdk_Errno){
+      .code = code,
+      .btraces = {{.file = file, .func = func, .line = line}},
+      .btraces_len = 1,
+  };
+
+  return &cdk_thread_error;
+}
+#else
+static inline cdk_errno_t cdk_error_create(uint16_t code) {
   cdk_thread_error = (struct cdk_Errno){
       .code = code,
   };
 
   return &cdk_thread_error;
 };
+#endif
 
-#if CDK_ERRNO_LSTR_ENABLE == 1
 /**
  * Create new errno using integer and string literal. The value created by this
  *   function should be used to set cdk_errno.
  */
-static inline struct cdk_Errno *cdk_errors(uint16_t code, const char *msg) {
+#if CDK_ERRNO_LSTR_ENABLE == 1
+#if CDK_ERRNO_BTRACE_ENABLE == 1
+static inline cdk_errno_t cdk_error_creates(uint16_t code, const char *msg,
+                                            const char *file, const char *func,
+                                            int line) {
+  cdk_thread_error = (struct cdk_Errno){
+      .code = code,
+      .msg = msg,
+      .btraces = {{.file = file, .func = func, .line = line}},
+      .btraces_len = 1,
+  };
+
+  return &cdk_thread_error;
+}
+#else
+static inline struct cdk_Errno *cdk_error_creates(uint16_t code,
+                                                  const char *msg) {
   cdk_thread_error = (struct cdk_Errno){
       .code = code,
       .msg = msg,
@@ -126,6 +179,7 @@ static inline struct cdk_Errno *cdk_errors(uint16_t code, const char *msg) {
 
   return &cdk_thread_error;
 }
+#endif
 #endif
 
 #if CDK_ERRNO_FSTR_ENABLE == 1
@@ -166,7 +220,7 @@ static inline struct cdk_Errno *cdk_errorf(uint16_t code, const char *fmt,
 }
 #endif
 
-static inline void cdk_error_dump_to_str(struct cdk_Errno *err, size_t buf_size,
+static inline void cdk_error_dump_to_str(cdk_errno_t err, size_t buf_size,
                                          char *buf) {
   if (!err || !buf || buf_size == 0) {
     return;
