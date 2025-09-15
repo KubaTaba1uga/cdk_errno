@@ -4,8 +4,8 @@
  * See LICENSE file in the project root for full license information.
  */
 
-#ifndef C_MINILIB_ERROR_H
-#define C_MINILIB_ERROR_H
+#ifndef CDK_ERROR_H
+#define CDK_ERROR_H
 
 #include <errno.h>
 #include <inttypes.h>
@@ -20,7 +20,7 @@
 ////
 //////
 /******************************************************************************
-   C MiniLib Error - Lightweight Error Tracing & Reporting
+   C Development Kit: Error - Lightweight Error Tracing & Reporting
 
    This library provides a fast, allocation-free way to track and pass error
    information across stack frames. Errors are stored in a circular ring buffer
@@ -33,13 +33,13 @@
      - Dump to string or file
 
    Usage:
-     - Call `cme_init()` once at startup.
-     - Use `cme_error(...)` or `cme_errorf(...)` to create an error.
-     - Use `cme_return(...)` to propagate and track.
-     - Call `cme_destroy()` at shutdown to free the buffer.
+     - Call `cdk_error_init()` once at startup.
+     - Use `cdk_error(...)` or `cdk_errorf(...)` to create an error.
+     - Use `cdk_ewrap(...)` to propagate and track.
+     - Call `cdk_error_destroy()` at shutdown to free the buffer.
 
    Example:
-     return cme_return(cme_errorf(404, "File not found: %s", path));
+     return cdk_ewrap(cdk_errorf(404, "File not found: %s", path));
 
  ******************************************************************************/
 //////////
@@ -135,9 +135,8 @@ static inline __attribute__((always_inline)) uint32_t cme_next_idx(void) {
 /**
  * Create a simple error (no formatting).
  */
-static inline __attribute__((always_inline)) cme_error_t
-cme_error_create(int code, const char *file, const char *func, int line,
-                 const char *msg) {
+static inline __attribute__((always_inline)) cme_error_t cme_error_create(
+    int code, const char *file, const char *func, int line, const char *msg) {
   if (!cme_ringbuf) {
     _cme_error_fallback.code = ENOMEM;
     _cme_error_fallback.msg = "cme_ringbuf is not initialized";
@@ -188,9 +187,8 @@ cme_error_create_fmt(int code, const char *file, const char *func, int line,
 /**
  * Push a backtrace frame onto an existing error.
  */
-static inline __attribute__((always_inline)) cme_error_t
-cme_error_push_frame(cme_error_t err, const char *file, const char *func,
-                     int line) {
+static inline __attribute__((always_inline)) cme_error_t cme_error_push_frame(
+    cme_error_t err, const char *file, const char *func, int line) {
 #ifdef CME_ENABLE_BACKTRACE
   if (err && err->frames_length < CME_STACK_MAX) {
     err->frames[err->frames_length++] =
@@ -295,4 +293,4 @@ static inline void cme_error_destroy(cme_error_t err) { (void)err; }
 #define cme_return(ERR)                                                        \
   cme_error_push_frame((ERR), __FILE__, __func__, __LINE__)
 
-#endif // C_MINILIB_ERROR_H
+#endif // CDK_ERROR_H

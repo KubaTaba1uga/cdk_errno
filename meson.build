@@ -1,8 +1,8 @@
-# C Minilib Error
+# C Development Kit: Errno
 # ******************************************************************************
 # *    Project
 # ******************************************************************************
-project('c_minilib_error', 'c',
+project('cdk_errno', 'c',
          version: '0.0.1',
 	 meson_version: '>=1.1',
 	 default_options: [
@@ -15,20 +15,20 @@ project('c_minilib_error', 'c',
 # *    Library
 # ******************************************************************************
 if get_option('backtrace')
-  add_project_arguments(['-DCME_ENABLE_BACKTRACE'], language: 'c')
+  add_project_arguments(['-DCDK_EBACKTRACE_ENABLE'], language: 'c')
 endif
 
-add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
+# add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 
 subdir('src')
 
-c_minilib_error_inc = ['include']
+cdk_errno_inc = include_directories('include')
 
-c_minilib_error_lib = library('c_minilib_error', sources, include_directories: c_minilib_error_inc)
+cdk_errno_lib = library('cdk_errno', sources, include_directories: cdk_errno_inc)
 
-c_minilib_error_dep = declare_dependency(
-  link_with: c_minilib_error_lib,
-  include_directories: c_minilib_error_inc
+cdk_errno_dep = declare_dependency(
+  link_with: cdk_errno_lib,
+  include_directories: cdk_errno_inc
 )
 
 # ******************************************************************************
