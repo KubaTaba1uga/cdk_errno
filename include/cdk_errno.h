@@ -7,6 +7,7 @@
 #ifndef CDK_ERRNO_H
 #define CDK_ERRNO_H
 
+#include <stddef.h>
 #ifdef __STDC_NO_THREADS__
 #errno "Threads extension is required to compile this library"
 #endif
@@ -15,6 +16,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <threads.h>
 
 //
@@ -56,11 +58,11 @@
  *                             Config / Limits                                *
  ******************************************************************************/
 #ifndef CDK_ERRNO_LSTR_ENABLE
-#define CDK_ERRNO_LSTR_ENABLE 0
+#define CDK_ERRNO_LSTR_ENABLE 1
 #endif
 
 #ifndef CDK_ERRNO_FSTR_ENABLE
-#define CDK_ERRNO_FSTR_ENABLE 0
+#define CDK_ERRNO_FSTR_ENABLE 1
 #endif
 
 #ifndef CDK_ERRNO_FSTR_MAX
@@ -163,5 +165,40 @@ static inline struct cdk_Errno *cdk_errorf(uint16_t code, const char *fmt,
   return &cdk_thread_error;
 }
 #endif
+
+static inline void cdk_error_dump_to_str(struct cdk_Errno *err, size_t buf_size,
+                                         char *buf) {
+  if (!err || !buf || buf_size == 0) {
+    return;
+  }
+
+  size_t offset = 0;
+  int written;
+
+  written = snprintf(buf + offset, buf_size - offset,
+                     "====== ERROR DUMP ======\n"
+                     "Error code: %s\n",
+                     strerror(err->code));
+  if (written < 0 || (size_t)written >= buf_size - offset) {
+    return;
+  }
+  offset += (size_t)written;
+
+#if CDK_ERRNO_FSTR_ENABLE == 1 || CDK_ERRNO_LSTR_ENABLE == 1
+  written = snprintf(buf + offset, buf_size - offset, "Error message: %.*s\n",
+                     CDK_ERRNO_FSTR_MAX, err->msg);
+  if (written < 0 || (size_t)written >= buf_size - offset) {
+    return;
+  }
+  offset += (size_t)written;
+#endif
+
+  written =
+      snprintf(buf + offset, buf_size - offset, "------------------------\n");
+  if (written < 0 || (size_t)written >= buf_size - offset) {
+    return;
+  }
+  offset += (size_t)written;
+};
 
 #endif // CDK_ERRNO_H

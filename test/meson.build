@@ -1,7 +1,7 @@
 # Manual list of tests (edit this list as you add/remove files)
 # You can omit 'exe' to derive it from the filename stem.
 tests = [
-  {'src': 'test_cdk_errno'},
+  {'src': 'test_cdk_errno', 'c_args': ['-DCDK_ERRNO_LSTR_ENABLE=1', '-DCDK_ERRNO_FSTR_ENABLE=1']},
   # {'src': 'test_c_minilib_error_with_backtrace.c', 'c_args': ['-DCME_ENABLE_BACKTRACE']},
   # {'src': 'test_c_minilib_error_ringbuffer.c'},
 ]
@@ -20,13 +20,13 @@ subdir('test_unity.d')
 
 foreach test : tests
   src = test['src']
-  # extra_c_args = t.has_key('c_args') ? t['c_args'] : []
+  extra_c_args = test.has_key('c_args') ? test['c_args'] : []
 
   exe = executable(src,
     sources: [src + '.c', test_runner.process(src + '.c')],
     dependencies: test_dependencies,
     include_directories: tests_inc,
-    # c_args: extra_c_args,
+    c_args: extra_c_args,
   )
 
   test(src + '_test', exe)
