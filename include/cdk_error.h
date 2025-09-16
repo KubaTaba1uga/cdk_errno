@@ -68,24 +68,11 @@
     To get backtrace frame use cdk_error_t->btraces and cdk_error_t->btraces_len
     fields.
 
-    To gather backtrace automatically you need to use cdk_ereturn function, wich
-    require that you return the cdk_Error struct. It makes gathering a backtrace
-    somehow big commitment but you gain almost no performance hit. So this is a
-    tradeoff thing, if you need fast backtrace on any error using cdk_ereturn is
-    propably a good idea but if you want to use library as errno mechanism,
-    means without returning the error from function you should not use backtrace
-    gathering in the error lib. The issue with passing error as errno variable
-    and gathering lazy backtrace is that user can override cdk_error to 0 and
-    break backtrace, so until we find how to solve this cleverly backtrace is
-    reserved only to cdk_ereturn function users.
-
-    The idea to solving this is creating a raise function, wich will do the
-    backtrace gather and return error value from org func. But i'm afraid that
-    if user overwrite 0 we will be leaved with broken backtrace.
-
-    The idea to solving this is creating cdk_is_err func wich check whether the
-    errno is 0 and if it is not then we add backtrace, but again here user can
-    reset errno.
+    To gather backtrace you need to use cdk_ereturn function or cdk_ewrap
+    function it depends how you aproach returning an error. If you signal error
+    by returning some error value from the function you should use cdk_ereturn,
+    on the other hand if you signal the error by clearing and setting cdk_errno
+   you should use cdk_ewrap function.
 
  ******************************************************************************/
 //////////
@@ -324,5 +311,18 @@ static inline void cdk_error_dump_to_str(cdk_error_t err, size_t buf_size,
   }
   offset += (size_t)written;
 };
+
+#if CDK_ERROR_BTRACE_ENABLE == 1
+#define cdk_ewrap(err)                                                         \
+  err->btraces[err->btraces_len++] = (struct cdk_BTrace) {                     \
+    .file = __FILE__, .func = __func__, .line = __LINE__                       \
+  }
+
+#define cdk_ereturn(ret, err)                                                  \
+  ({                                                                           \
+    cdk_ewrap(err);                                                            \
+    ret;                                                                       \
+  })
+#endif
 
 #endif // CDK_ERROR_H
