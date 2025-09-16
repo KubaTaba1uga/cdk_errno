@@ -1,3 +1,3 @@
 sources = files(
-   'cdk_errno.c',
+   'cdk_error.c',
 )
