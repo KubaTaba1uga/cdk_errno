@@ -157,7 +157,7 @@ typedef struct cdk_Error *cdk_error_t;
  * `error` equivalent. It should be set to 0, before usage
  *   and checked if not 0 after function execution.
  */
-thread_local extern struct cdk_Error *cdk_error;
+thread_local extern struct cdk_Error *cdk_errno;
 
 /**
  * Private storage for underlying cdk_error. You shouldn't need
@@ -213,7 +213,7 @@ static inline cdk_error_t _cdk_errors(uint16_t code, const char *msg,
   return &_cdk_thread_error;
 }
 #else
-#define cdk_errors(code) _cdk_errors((code))
+#define cdk_errors(code, msg) _cdk_errors((code), (msg))
 static inline struct cdk_Error *_cdk_errors(uint16_t code, const char *msg) {
   _cdk_thread_error = (struct cdk_Error){
       .code = code,
