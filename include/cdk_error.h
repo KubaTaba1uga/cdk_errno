@@ -31,13 +31,6 @@
    fields beside integer are optional and configurable making the library highly
    customizable.
 
-   To use integer only error:
-     - cdk_error(uint16_t code)
-
-   If you want to return error from function good practice is to use cdk_ereturn
-   function. Using cdk_ereturn allow you to gather backtrace, if you are not
-   interested in backtrace you can skip cdk_ereturn function.
-
    String Literal:
     To allow cdk_error_t to store string literals you need set
     CDK_ERROR_LSTR_ENABLE to 1. Once feature is enabled these functions become
@@ -59,25 +52,9 @@
 
    Backtrace:
     To allow cdk_error_t to store backtrace of the error you need to set
-    CDK_ERROR_BTRACE_ENABLE to 1. Once feature is enabled these functions change
-    behaviour to enable backtrace gathering:
-     - cdk_error(uint16_t code)
-     - cdk_errors(uint16_t code, const char *msg)
-     - cdk_errorf(uint16_t code, const char *fmt, ...)
-
-    To get backtrace frame use cdk_error_t->btraces and cdk_error_t->btraces_len
-    fields.
-
-    To gather backtrace automatically you need to use cdk_ereturn function, wich
-    require that you return the cdk_Error struct. It makes gathering a backtrace
-    somehow big commitment but you gain almost no performance hit. So this is a
-    tradeoff thing, if you need fast backtrace on any error using cdk_ereturn is
-    propably a good idea but if you want to use library as errno mechanism,
-    means without returning the error from function you should not use backtrace
-    gathering. The issue with passing error as errno variable and gathering lazy
-    backtrace is that user can override cdk_error to 0 and break backtrace, so
-    until we find how to solve this cleverly backtrace is reserved only to
-    cdk_ereturn function users.
+    CDK_ERROR_BTRACE_ENABLE to 1. Once feature is enabled these functions become
+    available:
+      - cdk
 
  ******************************************************************************/
 //////////
@@ -162,9 +139,8 @@ thread_local extern struct cdk_Error _cdk_thread_error;
  *   be used to set cdk_error.
  */
 #if CDK_ERROR_BTRACE_ENABLE == 1
-#define cdk_error(code) _cdk_error((code), __FILE__, __func__, __LINE__)
-static inline cdk_error_t _cdk_error(uint16_t code, const char *file,
-                                     const char *func, int line) {
+static inline cdk_error_t cdk_error_create(uint16_t code, const char *file,
+                                           const char *func, int line) {
   _cdk_thread_error = (struct cdk_Error){
       .code = code,
       .btraces = {{.file = file, .func = func, .line = line}},
@@ -174,8 +150,7 @@ static inline cdk_error_t _cdk_error(uint16_t code, const char *file,
   return &_cdk_thread_error;
 }
 #else
-#define cdk_error(code) _cdk_error((code))
-static inline cdk_error_t _cdk_error(uint16_t code) {
+static inline cdk_error_t cdk_error_create(uint16_t code) {
   _cdk_thread_error = (struct cdk_Error){
       .code = code,
   };
