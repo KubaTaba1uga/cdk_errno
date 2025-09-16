@@ -203,21 +203,18 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
 thread_local extern cdk_error_t cdk_errno;
 thread_local extern struct cdk_Error cdk_hidden_errno;
 
-static inline cdk_error_t cdk_errori(uint16_t code) {
-  return cdk_error_int(&cdk_hidden_errno, code, __FILE_NAME__, __func__,
-                       __LINE__);
-}
+#define cdk_errori(code)                                                       \
+  cdk_error_int(&cdk_hidden_errno, code, __FILE_NAME__, __func__, __LINE__)
 
-static inline cdk_error_t cdk_errors(uint16_t code, const char *msg) {
-  return cdk_error_lstr(&cdk_hidden_errno, code, __FILE_NAME__, __func__,
-                        __LINE__, msg);
-}
+#define cdk_errors(code, msg)                                                  \
+  cdk_error_lstr(&cdk_hidden_errno, code, __FILE_NAME__, __func__, __LINE__,   \
+                 msg);
 
 #define cdk_errorf(code, fmt, ...)                                             \
   cdk_error_fstr(&cdk_hidden_errno, (code), __FILE_NAME__, __func__, __LINE__, \
                  (fmt), ##__VA_ARGS__)
 
-#define cdk_ewrap() cdk_error_wrap(&cdk_errno)
+#define cdk_ewrap() cdk_error_wrap(&cdk_hidden_errno)
 #define cdk_ereturn(ret)                                                       \
   ({                                                                           \
     cdk_ewrap();                                                               \
