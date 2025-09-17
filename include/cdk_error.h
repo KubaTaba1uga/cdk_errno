@@ -1,11 +1,28 @@
 /*
  * Copyright (c) 2025 Jakub Buczynski <KubaTaba1uga>
  * SPDX-License-Identifier: MIT
- * See LICENSE file in the project root for full license information.
- */
+   MIT License
 
-#ifndef CDK_ERROR_H
-#define CDK_ERROR_H
+   Copyright (c) [2025] [Jakub Buczynski <KubaTaba1uga>]
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+ */
 
 #ifdef __STDC_NO_THREADS__
 #error "Threads extension is required to compile this library"
@@ -26,55 +43,32 @@
 /******************************************************************************
  C Development Kit: Error – a modern, fast, errno-like error mechanism.
 
- Purpose:
-   Provide an errno-style mechanism with extra context:
-   - numeric error code (compatible with <errno.h>)
-   - optional message (literal or formatted)
-   - lightweight manual backtrace (file, function, line)
+ Errno is awesome idea but in modern languages usually errors brings a lot more
+ than only status code. CDK: Error aims to bring simple modern errors to C. The
+ goal is to mimic errno but allow more fields and more advanced error features
+ than errno allows currently, which are string messages and backtraces.
 
- Features:
-   - No heap allocations, all storage is local or thread-local.
-   - Three error types:
-       INT  – code only, fastest
-       STR  – code + literal string
-       FSTR – code + formatted string (disabled if CDK_ERROR_OPTIMIZE defined)
-   - Thread-local errno analogue (cdk_errno) (disabled if CDK_DISABLE_ERRNO_API
-     defined).
-   - Manual backtrace via macros (no platform unwinding needed).
+ There are three error types by default:
+  - Integer error
+  - String error
+  - Formatted string error (this one can be disabled)
 
- Usage (local error object):
-   struct cdk_Error err;
-   return cdk_errori(&err, EINVAL);             // code only
-   return cdk_errors(&err, ENOENT, "not found");// literal message
-   return cdk_errorf(&err, EIO, "disk %u", d);  // formatted (if enabled)
+ We are using three errors for performance reasons, integer error is the fastest
+ string error is just a bit slower and formatted string error is the slowest due
+ to whole formatting that needs to be performed. C is often choose because of
+ performance so we are trying to be in the C spirit ;)
 
-   // Add a frame when propagating:
-   int res = some_fn();
-   if (res){
-     cdk_error_return(-1, &err);
-   }
+ If you do not need formatted string you can safe a few bytes by cutting
+ formatted string buffer out during compilation. To enable that feature define
+ CDK_ERROR_OPTIMIZE macro.
 
-   // Print error dump:
-   char buf[512];
-   cdk_error_dumps(&err, sizeof(buf), buf);
-   puts(buf);
+ The second awesome feature are backtraces. Every error is capable of holding
+ it's backtrace making debugging much much easier. Gathering a backtraces is
+ manual which may be sometimes annoying but have also few advanteges:
+ - it's very quick
+ - it work on every build
+ - it contain only functions from the lib itself, no noise
 
- Usage (errno-like thread-local API):
-   cdk_errnoi(EAGAIN);
-   cdk_errnos(EPERM, "denied");
-   cdk_errnof(EBUSY, "port %u", p);
-   cdk_ewrap();
-   return cdk_ereturn(-1);
-   cdk_edumps(sizeof buf, buf);
-
- Configuration macros:
-   CDK_ERROR_BTRACE_MAX   (default 16)  – max backtrace frames
-   CDK_ERROR_FSTR_MAX     (default 255) – formatted string buffer
-   CDK_ERROR_OPTIMIZE                 – drop FSTR support entirely
-   CDK_DISABLE_ERRNO_API              – disable thread-local errno analogue
-
- Requirements:
-   C11 threads support (<threads.h>).
 *****************************************************************************/
 //////////
 
@@ -90,6 +84,9 @@
 #endif
 
 #ifndef CDK_DISABLE_ERRNO_API
+#endif
+
+#ifndef CDK_ERROR_OPTIMIZE
 #endif
 
 /******************************************************************************
@@ -279,6 +276,7 @@ static inline void cdk_error_add_frame(cdk_error_t err,
   err->eframes[err->eframes_len++] = *frame;
 }
 
+#ifndef CDK_ERROR_OPTIMIZE
 #define cdk_error_wrap(err)                                                    \
   ({                                                                           \
     cdk_error_add_frame(err, &(struct cdk_EFrame){.file = __FILE_NAME__,       \
@@ -286,6 +284,10 @@ static inline void cdk_error_add_frame(cdk_error_t err,
                                                   .line = __LINE__});          \
     err;                                                                       \
   })
+#else
+#define cdk_error_wrap(err)
+#endif
+
 #define cdk_error_return(ret, err)                                             \
   ({                                                                           \
     cdk_error_wrap(err);                                                       \
@@ -324,6 +326,5 @@ _Thread_local extern struct cdk_Error cdk_hidden_errno;
 
 #define cdk_edumps(buf_size, buf)                                              \
   cdk_error_dumps(&cdk_hidden_errno, buf_size, buf)
-#endif
 
-#endif // CDK_ERROR_H
+#endif

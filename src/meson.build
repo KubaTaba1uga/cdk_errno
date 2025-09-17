@@ -1,1 +1,0 @@
-sources = files('cdk_error.c')

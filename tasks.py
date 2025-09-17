@@ -52,12 +52,11 @@ def install(c):
 
 
 @task
-def build(c, backtrace=False, debug=False, tests=False, examples=False):
+def build(c, debug=False, tests=False, examples=False):
     """
     Configure and build the project.
 
     Args:
-        backtrace (bool): Enable backtrace support. Usage: inv build --backtrace
         debug (bool): Build with debug symbols. Usage: inv build --debug
     """
     _pr_info("Building...")
@@ -65,9 +64,6 @@ def build(c, backtrace=False, debug=False, tests=False, examples=False):
     _run_command(c, f"mkdir -p {BUILD_PATH}")
 
     setup_command = f"CC={C_COMPILER} meson setup {BUILD_PATH}"
-
-    if backtrace:
-        setup_command = f"{setup_command} -Dbacktrace=true"
 
     if debug:
         setup_command = f"{setup_command} -Db_sanitize=address,undefined -Db_lundef=false -Dbuildtype=debug"
