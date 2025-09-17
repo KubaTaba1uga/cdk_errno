@@ -1,3 +1,1 @@
-sources = files(
-   'cdk_error.c',
-)
+sources = files('cdk_error.c')

@@ -7,7 +7,6 @@
 #ifndef CDK_ERROR_H
 #define CDK_ERROR_H
 
-#include <__stdarg_va_list.h>
 #ifdef __STDC_NO_THREADS__
 #error "Threads extension is required to compile this library"
 #endif
@@ -27,6 +26,18 @@
 /******************************************************************************
    C Development Kit: Error - Modern errno mechanism.
 
+   This library provides an errno alaike error mechanism but with more advanced
+   error structure than pure integer. The goal is to mimic errno but allow more
+   fields and more advanced error features than errno allows currently.
+
+   There are three types of errors wich differ in their functionalities, the
+   division is caused by speed consideretions. cdk_ErrorType_INT is the
+   quickest, then cdk_ErrorType_STR and cdk_ErrorType_FSTR is the slowest.
+
+   To optimize further library allow to drop FSTR type, to do so define
+   CDK_ERROR_OPTIMIZED before including the header.
+
+
    TO-DO: write usage comment
  ******************************************************************************/
 //////////
@@ -35,22 +46,31 @@
  *                             Config / Limits                                *
  ******************************************************************************/
 #ifndef CDK_ERROR_FSTR_MAX
-#define CDK_ERROR_FSTR_MAX 1024
+#define CDK_ERROR_FSTR_MAX 255
 #endif
 
 #ifndef CDK_ERROR_BTRACE_MAX
-#define CDK_ERROR_BTRACE_MAX 32
+#define CDK_ERROR_BTRACE_MAX 16
+#endif
+
+#ifndef CDK_DISABLE_ERRNO_API
 #endif
 
 /******************************************************************************
  *                             Data types                                     *
  ******************************************************************************/
+/**
+ * Error type.
+ */
 enum cdk_ErrorType {
   cdk_ErrorType_INT,
   cdk_ErrorType_STR,
   cdk_ErrorType_FSTR,
 };
 
+/**
+ * Error frame object.
+ */
 struct cdk_EFrame {
   const char *file;
   const char *func;
@@ -61,17 +81,12 @@ struct cdk_EFrame {
  * Common error object.
  */
 struct cdk_Error {
-  // Generic error
-  enum cdk_ErrorType type;
-  uint16_t code;
-
-  // String and formatted string
-  const char *msg;
-  char _msg_buf[CDK_ERROR_FSTR_MAX];
-
-  // Backtrace
-  struct cdk_EFrame eframes[CDK_ERROR_BTRACE_MAX];
-  size_t eframes_len;
+  enum cdk_ErrorType type;           // Error type
+  uint16_t code;                     // Status code
+  const char *msg;                   // String msg, can be NULL
+  char _msg_buf[CDK_ERROR_FSTR_MAX]; // Internal storage for formatted string
+  struct cdk_EFrame eframes[CDK_ERROR_BTRACE_MAX]; // Backtrace frames
+  size_t eframes_len;                              // Backtrace frames length
 };
 
 typedef struct cdk_Error *cdk_error_t;
@@ -80,7 +95,7 @@ typedef struct cdk_Error *cdk_error_t;
  *                                 Generic API                                *
  ******************************************************************************/
 /**
- * Create struct cdk_Error.
+ * Create struct cdk_Error of type cdk_ErrorType_INT.
  */
 static inline cdk_error_t cdk_error_int(struct cdk_Error *err, uint16_t code,
                                         const char *file, const char *func,
@@ -96,7 +111,7 @@ static inline cdk_error_t cdk_error_int(struct cdk_Error *err, uint16_t code,
 };
 
 /**
- * Create struct cdk_StrError.
+ * Create struct cdk_Error of type cdk_ErrorType_STR.
  */
 static inline cdk_error_t cdk_error_lstr(struct cdk_Error *err, uint16_t code,
                                          const char *file, const char *func,
@@ -113,7 +128,7 @@ static inline cdk_error_t cdk_error_lstr(struct cdk_Error *err, uint16_t code,
 };
 
 /**
- * Create struct cdk_StrFmtError.
+ * Create struct cdk_Error of type cdk_ErrorType_FSTR.
  */
 static inline cdk_error_t cdk_error_fstr(struct cdk_Error *err, uint16_t code,
                                          const char *file, const char *func,
@@ -147,17 +162,27 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
 
   written = snprintf(buf, buf_size,
                      "====== ERROR DUMP ======\n"
-                     "Error code: %s\n",
-                     strerror(err->code));
+                     "Error code: %d\n"
+                     "Error desc: %s\n",
+                     err->code, strerror(err->code));
   if (written < 0 || (size_t)written >= buf_size) {
     return ENOBUFS;
   }
   offset += written;
 
+  if (err->type > cdk_ErrorType_INT) {
+    written =
+        snprintf(buf + offset, buf_size - offset, "------------------------\n");
+    if (written < 0 || (size_t)written >= buf_size) {
+      return ENOBUFS;
+    }
+    offset += written;
+  }
+
   switch (err->type) {
   case cdk_ErrorType_STR:
     written =
-        snprintf(buf + offset, buf_size - offset, "Error msg: %s\n", err->msg);
+        snprintf(buf + offset, buf_size - offset, " Error msg: %s\n", err->msg);
     if (written < 0 || (size_t)written >= buf_size) {
       return ENOBUFS;
     }
@@ -165,7 +190,7 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
     break;
 
   case cdk_ErrorType_FSTR:
-    written = snprintf(buf + offset, buf_size - offset, "Error msg: %.*s\n",
+    written = snprintf(buf + offset, buf_size - offset, " Error msg: %.*s\n",
                        (int)sizeof(err->_msg_buf), err->msg);
     if (written < 0 || (size_t)written >= buf_size) {
       return ENOBUFS;
@@ -183,42 +208,77 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
   }
   offset += written;
 
+  written = snprintf(buf + offset, buf_size - offset, " Backtrace:\n");
+  if (written < 0 || (size_t)written >= buf_size) {
+    return ENOBUFS;
+  }
+  offset += written;
+
+  for (int i = 0; i < err->eframes_len; i++) {
+    written = snprintf(buf + offset, buf_size - offset, "   [%02d] %s:%s:%d\n",
+                       i, err->eframes[i].file, err->eframes[i].func,
+                       err->eframes[i].line);
+    if (written < 0 || (size_t)written >= buf_size) {
+      return ENOBUFS;
+    }
+    offset += written;
+  }
+
   return 0;
+}
+static inline void cdk_error_add_frame(cdk_error_t err,
+                                       struct cdk_EFrame *frame) {
+  if (err->eframes_len >= CDK_ERROR_BTRACE_MAX) {
+    return;
+  }
+  err->eframes[err->eframes_len++] = *frame;
 }
 
 #define cdk_error_wrap(err)                                                    \
-  err->eframes[err->eframes_len++] = (struct cdk_EFrame) {                     \
-    .file = __FILE__, .func = __func__, .line = __LINE__                       \
-  }
-
+  ({                                                                           \
+    cdk_error_add_frame(err, &(struct cdk_EFrame){.file = __FILE_NAME__,       \
+                                                  .func = __func__,            \
+                                                  .line = __LINE__});          \
+    err;                                                                       \
+  })
 #define cdk_error_return(ret, err)                                             \
   ({                                                                           \
-    cdk_ewrap(err);                                                            \
+    cdk_error_wrap(err);                                                       \
     ret;                                                                       \
   })
 
+#define cdk_errori(err, code)                                                  \
+  cdk_error_int((err), (code), __FILE_NAME__, __func__, __LINE__)
+
+#define cdk_errors(err, code, msg)                                             \
+  cdk_error_lstr((err), (code), __FILE_NAME__, __func__, __LINE__, (msg));
+
+#define cdk_errorf(err, code, fmt, ...)                                        \
+  cdk_error_fstr((err), (code), __FILE_NAME__, __func__, __LINE__, (fmt),      \
+                 ##__VA_ARGS__)
+
 /******************************************************************************
- *                                >=C11 API                                   *
+ *                                Errno API                                   *
  ******************************************************************************/
+#ifdef CDK_DISABLE_ERRNO_API
+#else
 thread_local extern cdk_error_t cdk_errno;
 thread_local extern struct cdk_Error cdk_hidden_errno;
 
-#define cdk_errori(code)                                                       \
-  cdk_error_int(&cdk_hidden_errno, code, __FILE_NAME__, __func__, __LINE__)
+#define cdk_errnoi(code) cdk_errori(&cdk_hidden_errno, code)
 
-#define cdk_errors(code, msg)                                                  \
-  cdk_error_lstr(&cdk_hidden_errno, code, __FILE_NAME__, __func__, __LINE__,   \
-                 msg);
+#define cdk_errnos(code, msg) cdk_errors(&cdk_hidden_errno, code, msg)
 
-#define cdk_errorf(code, fmt, ...)                                             \
-  cdk_error_fstr(&cdk_hidden_errno, (code), __FILE_NAME__, __func__, __LINE__, \
-                 (fmt), ##__VA_ARGS__)
+#define cdk_errnof(code, fmt, ...)                                             \
+  cdk_errorf(&cdk_hidden_errno, code, fmt, ##__VA_ARGS__)
 
 #define cdk_ewrap() cdk_error_wrap(&cdk_hidden_errno)
-#define cdk_ereturn(ret)                                                       \
-  ({                                                                           \
-    cdk_ewrap();                                                               \
-    ret;                                                                       \
-  })
+
+#define cdk_ereturn(ret) cdk_error_return((ret), &cdk_hidden_errno)
+
+#define cdk_edumps(buf_size, buf)                                              \
+  cdk_error_dumps(&cdk_hidden_errno, buf_size, buf)
+
+#endif
 
 #endif // CDK_ERROR_H
