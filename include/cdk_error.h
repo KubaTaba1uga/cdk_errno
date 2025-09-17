@@ -43,33 +43,30 @@
 /******************************************************************************
  C Development Kit: Error – a modern, fast, errno-like error mechanism.
 
- Errno is awesome idea but in modern languages usually errors brings a lot more
- than only status code. CDK: Error aims to bring simple modern errors to C. The
- goal is to mimic errno but allow more fields and more advanced error features
- than errno allows currently, which are string messages and backtraces.
+ The idea behind `errno` is great, but in modern languages errors usually carry
+ more than just a status code. `cdk_error` brings that spirit to C: a simple,
+ lightweight error API with extra context such as string messages and manual
+ backtraces.
 
- There are three error types by default:
-  - Integer error
-  - String error
-  - Formatted string error (this one can be disabled)
+ By default there are three error kinds:
+   - Integer error
+   - String error
+   - Formatted string error (can be disabled)
 
- We are using three errors for performance reasons, integer error is the fastest
- string error is just a bit slower and formatted string error is the slowest due
- to whole formatting that needs to be performed. C is often choose because of
- performance so we are trying to be in the C spirit ;)
+ Each type exists for performance reasons. Integer errors are the fastest,
+ string errors add only a little overhead, and formatted errors are the slowest
+ because of formatting work. Since C is often chosen for performance, you can
+ trim down to only what you need. Defining `CDK_ERROR_OPTIMIZE` removes the
+ formatted string buffer to save bytes.
 
- If you do not need formatted string you can safe a few bytes by cutting
- formatted string buffer out during compilation. To enable that feature define
- CDK_ERROR_OPTIMIZE macro.
+ Another key feature is backtraces. Every error can store its own trace, making
+ debugging far easier. Trace collection is manual, which might feel verbose,
+ but it has important advantages:
+   - extremely fast
+   - works in every build (no special compiler flags)
+   - includes only frames from your code, no external noise
 
- The second awesome feature are backtraces. Every error is capable of holding
- it's backtrace making debugging much much easier. Gathering a backtraces is
- manual which may be sometimes annoying but have also few advanteges:
- - it's very quick
- - it work on every build
- - it contain only functions from the lib itself, no noise
-
-*****************************************************************************/
+******************************************************************************/
 //////////
 
 /******************************************************************************
@@ -87,6 +84,8 @@
 #endif
 
 #ifndef CDK_ERROR_OPTIMIZE
+#undef CDK_ERROR_BTRACE_MAX
+#define CDK_ERROR_BTRACE_MAX 1
 #endif
 
 /******************************************************************************
