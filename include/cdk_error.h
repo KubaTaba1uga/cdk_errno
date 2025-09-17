@@ -75,7 +75,7 @@ enum cdk_ErrorType {
 struct cdk_EFrame {
   const char *file;
   const char *func;
-  uint16_t line;
+  uint32_t line;
 };
 
 /**
@@ -150,6 +150,7 @@ static inline cdk_error_t cdk_error_fstr(struct cdk_Error *err, uint16_t code,
   va_start(args, fmt);
   int written_bytes =
       vsnprintf(err->_msg_buf, sizeof(err->_msg_buf), fmt, args);
+  va_end(args);
 
   assert(written_bytes >= 0);
 
@@ -189,7 +190,7 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
   case cdk_ErrorType_STR:
     written =
         snprintf(buf + offset, buf_size - offset, " Error msg: %s\n", err->msg);
-    if (written < 0 || (size_t)written >= buf_size) {
+    if (written < 0 || (size_t)written >= buf_size - offset) {
       return ENOBUFS;
     }
     offset += written;
@@ -199,7 +200,7 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
   case cdk_ErrorType_FSTR:
     written = snprintf(buf + offset, buf_size - offset, " Error msg: %.*s\n",
                        (int)sizeof(err->_msg_buf), err->msg);
-    if (written < 0 || (size_t)written >= buf_size) {
+    if (written < 0 || (size_t)written >= buf_size - offset) {
       return ENOBUFS;
     }
     offset += written;
@@ -210,13 +211,13 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
 
   written =
       snprintf(buf + offset, buf_size - offset, "------------------------\n");
-  if (written < 0 || (size_t)written >= buf_size) {
+  if (written < 0 || (size_t)written >= buf_size - offset) {
     return ENOBUFS;
   }
   offset += written;
 
   written = snprintf(buf + offset, buf_size - offset, " Backtrace:\n");
-  if (written < 0 || (size_t)written >= buf_size) {
+  if (written < 0 || (size_t)written >= buf_size - offset) {
     return ENOBUFS;
   }
   offset += written;
@@ -225,7 +226,7 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
     written = snprintf(buf + offset, buf_size - offset, "   [%02d] %s:%s:%d\n",
                        i, err->eframes[i].file, err->eframes[i].func,
                        err->eframes[i].line);
-    if (written < 0 || (size_t)written >= buf_size) {
+    if (written < 0 || (size_t)written >= buf_size - offset) {
       return ENOBUFS;
     }
     offset += written;
@@ -258,7 +259,7 @@ static inline void cdk_error_add_frame(cdk_error_t err,
   cdk_error_int((err), (code), __FILE_NAME__, __func__, __LINE__)
 
 #define cdk_errors(err, code, msg)                                             \
-  cdk_error_lstr((err), (code), __FILE_NAME__, __func__, __LINE__, (msg));
+  cdk_error_lstr((err), (code), __FILE_NAME__, __func__, __LINE__, (msg))
 
 #define cdk_errorf(err, code, fmt, ...)                                        \
   cdk_error_fstr((err), (code), __FILE_NAME__, __func__, __LINE__, (fmt),      \
@@ -269,8 +270,8 @@ static inline void cdk_error_add_frame(cdk_error_t err,
  ******************************************************************************/
 #ifdef CDK_DISABLE_ERRNO_API
 #else
-thread_local extern cdk_error_t cdk_errno;
-thread_local extern struct cdk_Error cdk_hidden_errno;
+_Thread_local extern cdk_error_t cdk_errno;
+_Thread_local extern struct cdk_Error cdk_hidden_errno;
 
 #define cdk_errnoi(code) cdk_errori(&cdk_hidden_errno, code)
 
@@ -285,7 +286,6 @@ thread_local extern struct cdk_Error cdk_hidden_errno;
 
 #define cdk_edumps(buf_size, buf)                                              \
   cdk_error_dumps(&cdk_hidden_errno, buf_size, buf)
-
 #endif
 
 #endif // CDK_ERROR_H
