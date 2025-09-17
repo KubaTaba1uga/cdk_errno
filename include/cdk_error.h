@@ -83,7 +83,7 @@
 #ifndef CDK_DISABLE_ERRNO_API
 #endif
 
-#ifndef CDK_ERROR_OPTIMIZE
+#ifdef CDK_ERROR_OPTIMIZE
 #undef CDK_ERROR_BTRACE_MAX
 #define CDK_ERROR_BTRACE_MAX 1
 #endif

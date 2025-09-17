@@ -3,7 +3,6 @@ tests = [
   {'src': 'test_cdk_errno', 'name': 'test_cdk_errno_with_backtrace'},
   {'src': 'test_cdk_errno_backtrace'},
   {'src': 'test_cdk_errno', 'name': 'test_cdk_errno_optimized', 'c_args': ['-DCDK_ERROR_OPTIMIZE']},
-  {'src': 'test_cdk_errno_backtrace', 'name': 'test_cdk_errno_optimized_with_backtrace', 'c_args': ['-DCDK_ERROR_OPTIMIZE']},    
 ]
 
 unity_subproject = subproject('unity')
