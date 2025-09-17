@@ -16,4 +16,3 @@ executable(
   c_args: ['-DCDK_ERROR_OPTIMIZE', '-O3', '-DNDEBUG'],
   include_directories: cdk_error_inc,  
 )
-

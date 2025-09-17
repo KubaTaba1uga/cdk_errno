@@ -56,15 +56,34 @@ void test_string_fmt_error_creation(void) {
 #endif
 }
 
-/* void test_error_dump_to_str(void) { */
-/*   cdk_errno = cdk_errorf(100, "Format error %d", 100); */
+void test_error_dump_to_str(void) {
+  struct cdk_Error *err, base;
+  err = cdk_errori(&base, 100);
+  TEST_ASSERT_NOT_NULL(err);
 
-/*   char buf[1024]; */
-/*   cdk_error_dump_to_str(cdk_errno, sizeof(buf), buf); */
+  char buf[1024];
+  cdk_error_dumps(err, sizeof(buf), buf);
+  TEST_ASSERT_EQUAL_STRING(
+      "====== ERROR DUMP ======\n"
+      "Error code: 100\n"
+      "Error desc: Network is down\n"
+      "------------------------\n"
+      " Backtrace:\n"
+      "   [00] test_cdk_errno.c:test_error_dump_to_str:61\n",
+      buf);
 
-/*   TEST_ASSERT_EQUAL_STRING("====== ERROR DUMP ======\n" */
-/*                            "Error code: Network is down\n" */
-/*                            "Error message: Format error 100\n" */
-/*                            "------------------------\n", */
-/*                            buf); */
-/* } */
+  err = cdk_errors(&base, 200, "Format error");
+  TEST_ASSERT_NOT_NULL(err);
+
+  cdk_error_dumps(err, sizeof(buf), buf);
+  TEST_ASSERT_EQUAL_STRING(
+      "====== ERROR DUMP ======\n"
+      "Error code: 200\n"
+      "Error desc: Unknown error 200\n"
+      "------------------------\n"
+      " Error msg: Format error\n"
+      "------------------------\n"
+      " Backtrace:\n"
+      "   [00] test_cdk_errno.c:test_error_dump_to_str:75\n",
+      buf);
+}
