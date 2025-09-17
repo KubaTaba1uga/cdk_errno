@@ -1,26 +1,18 @@
-# Define include directories relative to the project root.
 executable(
-  'example',
-  'example.c',
-  dependencies : c_minilib_error_dep,
-  c_args : [
-    '-O0'                         # Disable compiler optimizations (more accurate traces)
-  ],
-  link_args : [
-    '-O0'                         # Disable linker-level optimizations (more accurate traces)
-  ],
+  'example_1',
+  sources: ['example_1.c', 'example_1_lib.c'],
+  include_directories: cdk_error_inc,  
 )
 
-executable('bench',
-  'bench.c',                              # your benchmark file
-  dependencies   : c_minilib_error_dep,   # from root meson.build
-  c_args : [
-    '-DCME_ENABLE_BACKTRACE',
-    '-march=native',
-    '-O3'                        
-  ],
-  link_args : [
-    '-O3'                         # Disable linker-level optimizations (more accurate traces)
-  ],
+executable(
+  'example_2',
+  sources: ['example_2.c', 'example_2_lib.c'],
+  include_directories: cdk_error_inc,  
+)
 
+executable(
+  'bench',
+  sources: ['bench.c', 'example_2_lib.c'],
+  c_args: ['-DCDK_ERROR_OPTIMIZE', '-O3', '-DNDEBUG'],
+  include_directories: cdk_error_inc,  
 )

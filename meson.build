@@ -1,8 +1,8 @@
-# C Minilib Error
+# C Development Kit: Error
 # ******************************************************************************
 # *    Project
 # ******************************************************************************
-project('c_minilib_error', 'c',
+project('cdk_error', 'c',
          version: '0.0.1',
 	 meson_version: '>=1.1',
 	 default_options: [
@@ -14,22 +14,7 @@ project('c_minilib_error', 'c',
 # ******************************************************************************
 # *    Library
 # ******************************************************************************
-if get_option('backtrace')
-  add_project_arguments(['-DCME_ENABLE_BACKTRACE'], language: 'c')
-endif
-
-add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
-
-subdir('src')
-
-c_minilib_error_inc = ['include']
-
-c_minilib_error_lib = library('c_minilib_error', sources, include_directories: c_minilib_error_inc)
-
-c_minilib_error_dep = declare_dependency(
-  link_with: c_minilib_error_lib,
-  include_directories: c_minilib_error_inc
-)
+cdk_error_inc = include_directories('include')
 
 # ******************************************************************************
 # *    Tests
@@ -37,7 +22,6 @@ c_minilib_error_dep = declare_dependency(
 if get_option('tests')
    subdir('test')
 endif
-
 
 # ******************************************************************************
 # *    Example
