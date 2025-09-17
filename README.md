@@ -1,7 +1,8 @@
-# ⚡ cdk_error
+# ⚡ C Development Kit: Error
 
-`cdk_error` is a small, modern C library that brings structured error handling into plain C code.
-It works much like `errno`, but adds richer context: not just an error code, but also a message and a lightweight backtrace showing where the error has been passed along. All of this comes without any heap allocations, making it safe and fast even for embedded or low-overhead systems.
+The C Development Kit (CDK) is a collection of lightweight, MIT-licensed libraries to make C development on Linux simpler and more consistent.
+
+C Development Kit: Error is an error component. It works much like `errno`, but adds richer context: not just an error code, but also a message and a lightweight backtrace showing where the error has been passed along. All of this comes without any heap allocations, making it safe and fast even for embedded or low-overhead systems.
 
 What is nice about `cdk_errno` is that on fast path it is as fast as normal `errno`, so if no error occured in the function there is no penalty hit. The difference show only on slow path so when error occurs:
 ```
