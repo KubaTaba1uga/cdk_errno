@@ -32,13 +32,12 @@
 
    There are three types of errors wich differ in their functionalities, the
    division is caused by speed consideretions. cdk_ErrorType_INT is the
-   quickest, then cdk_ErrorType_STR and cdk_ErrorType_FSTR is the slowest.
+   quickest, cdk_ErrorType_STR is slower and cdk_ErrorType_FSTR is the slowest.
 
    To optimize further library allow to drop FSTR type, to do so define
-   CDK_ERROR_OPTIMIZED before including the header.
+   CDK_ERROR_OPTIMIZE before including the header. However this require to
+   delete all fstr type usage from the code.
 
-
-   TO-DO: write usage comment
  ******************************************************************************/
 //////////
 
@@ -65,7 +64,9 @@
 enum cdk_ErrorType {
   cdk_ErrorType_INT,
   cdk_ErrorType_STR,
+#ifndef CDK_ERROR_OPTIMIZE
   cdk_ErrorType_FSTR,
+#endif
 };
 
 /**
@@ -81,12 +82,15 @@ struct cdk_EFrame {
  * Common error object.
  */
 struct cdk_Error {
-  enum cdk_ErrorType type;           // Error type
-  uint16_t code;                     // Status code
-  const char *msg;                   // String msg, can be NULL
-  char _msg_buf[CDK_ERROR_FSTR_MAX]; // Internal storage for formatted string
+  enum cdk_ErrorType type;                         // Error type
+  uint16_t code;                                   // Status code
+  const char *msg;                                 // String msg, can be NULL
   struct cdk_EFrame eframes[CDK_ERROR_BTRACE_MAX]; // Backtrace frames
   size_t eframes_len;                              // Backtrace frames length
+
+#ifndef CDK_ERROR_OPTIMIZE
+  char _msg_buf[CDK_ERROR_FSTR_MAX]; // Internal storage for formatted string
+#endif
 };
 
 typedef struct cdk_Error *cdk_error_t;
@@ -127,6 +131,7 @@ static inline cdk_error_t cdk_error_lstr(struct cdk_Error *err, uint16_t code,
   return err;
 };
 
+#ifndef CDK_ERROR_OPTIMIZE
 /**
  * Create struct cdk_Error of type cdk_ErrorType_FSTR.
  */
@@ -152,6 +157,7 @@ static inline cdk_error_t cdk_error_fstr(struct cdk_Error *err, uint16_t code,
 
   return err;
 };
+#endif
 
 /**
  * Dump all struct cdk_XError to string.
@@ -189,6 +195,7 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
     offset += written;
     break;
 
+#ifndef CDK_ERROR_OPTIMIZE
   case cdk_ErrorType_FSTR:
     written = snprintf(buf + offset, buf_size - offset, " Error msg: %.*s\n",
                        (int)sizeof(err->_msg_buf), err->msg);
@@ -197,7 +204,7 @@ static inline int cdk_error_dumps(cdk_error_t err, size_t buf_size, char *buf) {
     }
     offset += written;
     break;
-
+#endif
   default:;
   }
 

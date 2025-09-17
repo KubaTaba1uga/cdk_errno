@@ -33,7 +33,9 @@ void test_string_error_creation(void) {
   TEST_ASSERT_EQUAL(cdk_ErrorType_STR, err->type);
   TEST_ASSERT_EQUAL_STRING("Shuting down in progress", base.msg);
 }
+
 void test_string_fmt_error_creation(void) {
+#ifndef CDK_ERROR_OPTIMIZE
   struct cdk_Error *err, base;
   err = cdk_error_fstr(&base, EINVAL, __FILE_NAME__, __func__, __LINE__,
                        "Invalid user input: %d", EINVAL);
@@ -51,6 +53,7 @@ void test_string_fmt_error_creation(void) {
   sprintf(expected, "Downloading a file, cannot interrupt: %s",
           "/opt/super_secret_file.txt");
   TEST_ASSERT_EQUAL_STRING(expected, base.msg);
+#endif
 }
 
 /* void test_error_dump_to_str(void) { */
