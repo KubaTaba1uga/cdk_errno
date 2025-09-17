@@ -24,21 +24,58 @@
 ////
 //////
 /******************************************************************************
-   C Development Kit: Error - Modern errno mechanism.
+ C Development Kit: Error – a modern, fast, errno-like error mechanism.
 
-   This library provides an errno alaike error mechanism but with more advanced
-   error structure than pure integer. The goal is to mimic errno but allow more
-   fields and more advanced error features than errno allows currently.
+ Purpose:
+   Provide an errno-style mechanism with extra context:
+   - numeric error code (compatible with <errno.h>)
+   - optional message (literal or formatted)
+   - lightweight manual backtrace (file, function, line)
 
-   There are three types of errors wich differ in their functionalities, the
-   division is caused by speed consideretions. cdk_ErrorType_INT is the
-   quickest, cdk_ErrorType_STR is slower and cdk_ErrorType_FSTR is the slowest.
+ Features:
+   - No heap allocations, all storage is local or thread-local.
+   - Three error types:
+       INT  – code only, fastest
+       STR  – code + literal string
+       FSTR – code + formatted string (disabled if CDK_ERROR_OPTIMIZE defined)
+   - Thread-local errno analogue (cdk_errno) (disabled if CDK_DISABLE_ERRNO_API
+     defined).
+   - Manual backtrace via macros (no platform unwinding needed).
 
-   To optimize further library allow to drop FSTR type, to do so define
-   CDK_ERROR_OPTIMIZE before including the header. However this require to
-   delete all fstr type usage from the code.
+ Usage (local error object):
+   struct cdk_Error err;
+   return cdk_errori(&err, EINVAL);             // code only
+   return cdk_errors(&err, ENOENT, "not found");// literal message
+   return cdk_errorf(&err, EIO, "disk %u", d);  // formatted (if enabled)
 
- ******************************************************************************/
+   // Add a frame when propagating:
+   int res = some_fn();
+   if (res){
+     cdk_error_return(-1, &err);
+   }
+
+   // Print error dump:
+   char buf[512];
+   cdk_error_dumps(&err, sizeof(buf), buf);
+   puts(buf);
+
+ Usage (errno-like thread-local API):
+   cdk_errnoi(EAGAIN);
+   cdk_errnos(EPERM, "denied");
+   cdk_errnof(EBUSY, "port %u", p);
+   cdk_ewrap();
+   return cdk_ereturn(-1);
+   cdk_edumps(sizeof buf, buf);
+
+ Configuration macros:
+   CDK_ERROR_BTRACE_MAX   (default 16)  – max backtrace frames
+   CDK_ERROR_FSTR_MAX     (default 255) – formatted string buffer
+   CDK_ERROR_OPTIMIZE                 – drop FSTR support entirely
+   CDK_DISABLE_ERRNO_API              – disable thread-local errno analogue
+
+ Requirements:
+   C11 threads support (<threads.h>).
+*****************************************************************************/
 //////////
 
 /******************************************************************************
@@ -56,7 +93,7 @@
 #endif
 
 /******************************************************************************
- *                             Data types                                     *
+ *                             Data types *
  ******************************************************************************/
 /**
  * Error type.
@@ -268,8 +305,7 @@ static inline void cdk_error_add_frame(cdk_error_t err,
 /******************************************************************************
  *                                Errno API                                   *
  ******************************************************************************/
-#ifdef CDK_DISABLE_ERRNO_API
-#else
+#ifndef CDK_DISABLE_ERRNO_API
 _Thread_local extern cdk_error_t cdk_errno;
 _Thread_local extern struct cdk_Error cdk_hidden_errno;
 
@@ -277,8 +313,10 @@ _Thread_local extern struct cdk_Error cdk_hidden_errno;
 
 #define cdk_errnos(code, msg) cdk_errors(&cdk_hidden_errno, code, msg)
 
+#ifndef CDK_ERROR_OPTIMIZE
 #define cdk_errnof(code, fmt, ...)                                             \
   cdk_errorf(&cdk_hidden_errno, code, fmt, ##__VA_ARGS__)
+#endif
 
 #define cdk_ewrap() cdk_error_wrap(&cdk_hidden_errno)
 

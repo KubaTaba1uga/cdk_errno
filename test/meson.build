@@ -5,8 +5,6 @@ tests = [
   {'src': 'test_cdk_errno', 'name': 'test_cdk_errno_with_backtrace'},
   {'src': 'test_cdk_errno_backtrace'},
   {'src': 'test_cdk_errno', 'name': 'test_cdk_errno_optimized', 'c_args': ['-DCDK_ERROR_OPTIMIZE']},  
-  # {'src': 'test_c_minilib_error_with_backtrace.c', 'c_args': ['-DCME_ENABLE_BACKTRACE']},
-  # {'src': 'test_c_minilib_error_ringbuffer.c'},
 ]
 
 unity_subproject = subproject('unity')

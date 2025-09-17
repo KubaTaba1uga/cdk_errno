@@ -1,8 +1,3 @@
-option('backtrace',
-  type: 'boolean',
-  value: false,
-  description: 'Enable backtrace support in cme_Error'
-)
 option('tests',
   type: 'boolean',
   value: false,
